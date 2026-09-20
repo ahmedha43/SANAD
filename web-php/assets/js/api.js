@@ -61,6 +61,7 @@ const API = {
     generatePairCode: (childId) => API.post(`/devices/children/${childId}/pair-code`, {}),
     sendCommand: (deviceId, action, params = {}) => API.post(`/devices/${deviceId}/command`, { action, params }),
     deleteDevice: (deviceId) => API.del(`/devices/${deviceId}`),
+    deleteChild: (childId) => API.del(`/devices/children/${childId}`),
 
     // === Location ===
     getLatestLocation: (deviceId) => API.get(`/devices/${deviceId}/location/latest`),

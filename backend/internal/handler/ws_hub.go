@@ -75,6 +75,13 @@ func (h *WSHub) GetOnlineDeviceCount() int {
 	return len(h.kids)
 }
 
+func (h *WSHub) IsKidOnline(deviceID string) bool {
+	h.RLock()
+	defer h.RUnlock()
+	_, ok := h.kids[deviceID]
+	return ok
+}
+
 func (h *WSHub) SendCommandToKid(deviceID string, cmd *domain.DeviceCommand, action string, params map[string]interface{}) bool {
 	h.RLock()
 	client, ok := h.kids[deviceID]
@@ -227,6 +234,9 @@ func (h *WSHub) Run() {
 					FamilyID:  client.FamilyID,
 					Timestamp: time.Now().UnixMilli(),
 				})
+				if devUID, err := uuid.Parse(client.ID); err == nil && h.repo != nil {
+					_ = h.repo.UpdateDeviceStatus(context.Background(), devUID, domain.StatusOnline, 100, false, "")
+				}
 				// Push any whitelisted safe patterns
 				if devUID, err := uuid.Parse(client.ID); err == nil && h.repo != nil {
 					go func(dID uuid.UUID, c *Client) {
@@ -277,6 +287,9 @@ func (h *WSHub) Run() {
 						FamilyID:  client.FamilyID,
 						Timestamp: time.Now().UnixMilli(),
 					})
+					if devUID, err := uuid.Parse(client.ID); err == nil && h.repo != nil {
+						_ = h.repo.UpdateDeviceStatus(context.Background(), devUID, domain.StatusOffline, 0, false, "")
+					}
 				}
 			} else {
 				if familyParents, ok := h.parents[client.FamilyID]; ok {

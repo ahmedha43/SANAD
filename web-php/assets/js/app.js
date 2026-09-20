@@ -142,13 +142,13 @@ const App = {
         container.innerHTML = STATE.children.map(child => {
             const dev = STATE.devices.find(d => d.child_id === child.id);
             const isSelected = child.id === STATE.activeChildId;
-            const isOnline = dev?.is_online || false;
-            const battery = dev?.battery_level || '--';
-            const model = dev?.model || 'جهاز ذكي';
+            const isOnline = dev ? (dev.status === 'online' || dev.is_online === true) : false;
+            const battery = dev?.battery_level !== undefined && dev?.battery_level !== null ? dev.battery_level : '--';
+            const model = dev ? (dev.model || 'جهاز ذكي') : 'بانتظار الاقتران';
             const isWindows = dev?.os_type === 'windows' ||
                               (dev?.model && dev.model.toLowerCase().includes('windows')) ||
                               (dev?.os_version && dev.os_version.toLowerCase().includes('windows'));
-            const deviceIcon = isWindows ? 'fa-laptop' : 'fa-mobile-screen-button';
+            const deviceIcon = dev ? (isWindows ? 'fa-laptop' : 'fa-mobile-screen-button') : 'fa-clock';
 
             return `
                 <div class="child-card ${isSelected ? 'active' : ''}" onclick="App.selectChild('${child.id}', '${dev ? dev.id : ''}')">
@@ -156,18 +156,16 @@ const App = {
                         <i class="fa-solid ${deviceIcon}"></i>
                     </div>
                     <div class="child-info">
-                        <div class="child-name">${child.name}</div>
-                        <div class="child-model">${model}</div>
+                        <div class="child-name">${escapeHtml(child.name)}</div>
+                        <div class="child-model">${escapeHtml(model)}</div>
                         <div class="child-meta">
-                            <span class="child-battery"><i class="fa-solid fa-battery-half"></i> ${battery}%</span>
-                            <span class="child-status ${isOnline ? 'online' : ''}">${isOnline ? 'متصل' : 'غير متصل'}</span>
+                            ${dev ? `<span class="child-battery"><i class="fa-solid fa-battery-half"></i> ${battery}%</span>` : ''}
+                            <span class="child-status ${isOnline ? 'online' : ''}">${dev ? (isOnline ? 'متصل' : 'غير متصل') : '⏳ لم يُربط جهاز'}</span>
                         </div>
                     </div>
-                    ${dev ? `
-                    <button class="child-delete-btn" onclick="event.stopPropagation(); openDeleteDeviceModal('${dev.id}', '${escapeHtml(child.name)}', '${escapeHtml(model)}')" title="حذف هذا الجهاز وفك كافة القيود">
+                    <button class="child-delete-btn" onclick="event.stopPropagation(); ${dev ? `openDeleteDeviceModal('${dev.id}', '${escapeHtml(child.name)}', '${escapeHtml(model)}', '${child.id}')` : `openDeleteChildModal('${child.id}', '${escapeHtml(child.name)}')`}" title="${dev ? 'حذف هذا الجهاز وفك كافة القيود' : 'حذف ملف هذا الطفل'}">
                         <i class="fa-solid fa-trash-can"></i>
                     </button>
-                    ` : ''}
                 </div>
             `;
         }).join('');
@@ -205,10 +203,12 @@ const App = {
         document.getElementById('cardDeviceModel').textContent = `${childName} (${modelName})`;
 
         if (dev) {
-            UI.updateDeviceOnlineStatus(dev.is_online, dev.battery_level);
+            UI.updateDeviceOnlineStatus(dev.status === 'online' || dev.is_online === true, dev.battery_level);
             if (typeof updateMasterMonitoringUI === 'function') {
                 updateMasterMonitoringUI(dev.is_monitoring_paused || false);
             }
+        } else {
+            UI.updateDeviceOnlineStatus(false, null);
         }
     },
 
@@ -2500,8 +2500,8 @@ function filterContacts(q) {
     App.renderContactsTable(filtered);
 }
 
-// === Device Permanent Deletion & Unpair ===
-function openDeleteDeviceModal(deviceId, childName, modelName) {
+// === Device & Child Permanent Deletion & Unpair ===
+function openDeleteDeviceModal(deviceId, childName, modelName, childId) {
     const targetDevId = deviceId || STATE.activeDeviceId;
     if (!targetDevId) {
         UI.showToast('يرجى تحديد جهاز لحذفه', 'warning');
@@ -2509,19 +2509,28 @@ function openDeleteDeviceModal(deviceId, childName, modelName) {
     }
 
     const dev = STATE.devices.find(d => d.id === targetDevId);
-    const child = dev ? STATE.children.find(c => c.id === dev.child_id) : null;
+    const child = dev ? STATE.children.find(c => c.id === dev.child_id) : (childId ? STATE.children.find(c => c.id === childId) : null);
 
     const cName = childName || (child ? child.name : 'جهاز الطفل');
     const mName = modelName || (dev ? dev.model : 'جهاز ذكي');
 
+    const titleEl = document.getElementById('deleteModalTitle');
+    const subtitleEl = document.getElementById('deleteModalSubtitle');
     const nameEl = document.getElementById('deleteTargetChildName');
     const infoEl = document.getElementById('deleteTargetDeviceInfo');
     const idEl = document.getElementById('deleteTargetDeviceId');
+    const childIdEl = document.getElementById('deleteTargetChildId');
+    const typeEl = document.getElementById('deleteTargetType');
     const iconEl = document.getElementById('deleteTargetIcon');
 
+    if (titleEl) titleEl.textContent = 'حذف الجهاز وفك كافة القيود نهائياً';
+    if (subtitleEl) subtitleEl.textContent = 'إلغاء اقتران دائم ومسح شامل لبيانات الجهاز والرقابة';
     if (nameEl) nameEl.textContent = cName;
     if (infoEl) infoEl.textContent = `${mName} (المعرف: ${targetDevId.substring(0, 8)}...)`;
     if (idEl) idEl.value = targetDevId;
+    if (childIdEl) childIdEl.value = child ? child.id : (childId || '');
+    if (typeEl) typeEl.value = 'device';
+
     if (iconEl && dev) {
         const isWindows = dev.os_type === 'windows' ||
                           (dev.model && dev.model.toLowerCase().includes('windows')) ||
@@ -2533,53 +2542,128 @@ function openDeleteDeviceModal(deviceId, childName, modelName) {
     if (modal) modal.style.display = 'flex';
 }
 
-async function executeDeviceCompleteDeletion() {
-    const idEl = document.getElementById('deleteTargetDeviceId');
-    const deviceId = idEl ? idEl.value : STATE.activeDeviceId;
-    if (!deviceId) {
-        UI.showToast('تعذر العثور على معرف الجهاز المطلوب حذفه', 'error');
+function openDeleteChildModal(childId, childName) {
+    if (!childId) {
+        UI.showToast('يرجى تحديد طفل لحذفه', 'warning');
         return;
     }
+
+    const child = STATE.children.find(c => c.id === childId);
+    const cName = childName || (child ? child.name : 'ملف الطفل');
+
+    const titleEl = document.getElementById('deleteModalTitle');
+    const subtitleEl = document.getElementById('deleteModalSubtitle');
+    const nameEl = document.getElementById('deleteTargetChildName');
+    const infoEl = document.getElementById('deleteTargetDeviceInfo');
+    const idEl = document.getElementById('deleteTargetDeviceId');
+    const childIdEl = document.getElementById('deleteTargetChildId');
+    const typeEl = document.getElementById('deleteTargetType');
+    const iconEl = document.getElementById('deleteTargetIcon');
+
+    if (titleEl) titleEl.textContent = 'حذف ملف الطفل نهائياً';
+    if (subtitleEl) subtitleEl.textContent = 'حذف ملف الطفل ورموز الاقتران المرتبطة به بالكامل';
+    if (nameEl) nameEl.textContent = cName;
+    if (infoEl) infoEl.textContent = 'ملف طفل (لم يتم ربط جهاز بعد أو بانتظار الاقتران)';
+    if (idEl) idEl.value = '';
+    if (childIdEl) childIdEl.value = childId;
+    if (typeEl) typeEl.value = 'child';
+
+    if (iconEl) {
+        iconEl.className = 'fa-solid fa-child';
+    }
+
+    const modal = document.getElementById('deleteDeviceModal');
+    if (modal) modal.style.display = 'flex';
+}
+
+async function executeDeviceCompleteDeletion() {
+    const typeEl = document.getElementById('deleteTargetType');
+    const idEl = document.getElementById('deleteTargetDeviceId');
+    const childIdEl = document.getElementById('deleteTargetChildId');
+
+    const isChild = typeEl && typeEl.value === 'child';
+    const deviceId = idEl ? idEl.value : '';
+    const childId = childIdEl ? childIdEl.value : '';
 
     const btn = document.getElementById('btnConfirmDeleteDevice');
     const originalBtnHtml = btn ? btn.innerHTML : '';
     if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> جاري فك القيود وحذف الجهاز...';
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> جاري فك القيود والحذف...';
     }
 
     try {
-        await API.deleteDevice(deviceId);
+        if (isChild || (!deviceId && childId)) {
+            // Delete child profile directly via API
+            await API.deleteChild(childId);
+            UI.showToast('تم حذف ملف الطفل ورموز الاقتران بنجاح! 🚀', 'success');
 
-        closeModal('deleteDeviceModal');
-        UI.showToast('تم حذف الجهاز وإلغاء اقترانه وفك كافة القيود بنجاح! 🚀', 'success');
+            // Remove from local state
+            STATE.children = STATE.children.filter(c => c.id !== childId);
+            STATE.devices = STATE.devices.filter(d => d.child_id !== childId);
 
-        // Remove from local state
-        const removedDev = STATE.devices.find(d => d.id === deviceId);
-        STATE.devices = STATE.devices.filter(d => d.id !== deviceId);
-        if (removedDev) {
-            STATE.children = STATE.children.filter(c => c.id !== removedDev.child_id);
-        }
+            if (STATE.activeChildId === childId) {
+                if (STATE.children.length > 0) {
+                    const nextChild = STATE.children[0];
+                    const nextDev = STATE.devices.find(d => d.child_id === nextChild.id);
+                    App.selectChild(nextChild.id, nextDev ? nextDev.id : '');
+                } else {
+                    STATE.activeDeviceId = null;
+                    STATE.activeChildId = null;
+                    localStorage.removeItem('active_device_id');
+                    localStorage.removeItem('active_child_id');
+                    App.updateActiveDeviceUI();
+                }
+            }
+        } else {
+            if (!deviceId) {
+                UI.showToast('تعذر العثور على معرف الجهاز المطلوب حذفه', 'error');
+                return;
+            }
 
-        if (STATE.activeDeviceId === deviceId) {
-            if (STATE.devices.length > 0) {
-                const nextDev = STATE.devices[0];
-                const nextChild = STATE.children.find(c => c.id === nextDev.child_id);
-                App.selectChild(nextChild ? nextChild.id : '', nextDev.id);
+            // Always delete child profile if associated, to ensure full cascade wipe
+            if (childId) {
+                try {
+                    await API.deleteChild(childId);
+                } catch(e) {
+                    await API.deleteDevice(deviceId);
+                }
             } else {
-                STATE.activeDeviceId = null;
-                STATE.activeChildId = null;
-                localStorage.removeItem('active_device_id');
-                localStorage.removeItem('active_child_id');
-                App.updateActiveDeviceUI();
+                await API.deleteDevice(deviceId);
+            }
+
+            UI.showToast('تم حذف الجهاز وفك كافة القيود نهائياً بنجاح! 🚀', 'success');
+
+            // Remove from local state
+            const removedDev = STATE.devices.find(d => d.id === deviceId);
+            STATE.devices = STATE.devices.filter(d => d.id !== deviceId);
+            if (removedDev && removedDev.child_id) {
+                STATE.children = STATE.children.filter(c => c.id !== removedDev.child_id);
+            } else if (childId) {
+                STATE.children = STATE.children.filter(c => c.id !== childId);
+            }
+
+            if (STATE.activeDeviceId === deviceId || STATE.activeChildId === childId) {
+                if (STATE.children.length > 0) {
+                    const nextChild = STATE.children[0];
+                    const nextDev = STATE.devices.find(d => d.child_id === nextChild.id);
+                    App.selectChild(nextChild.id, nextDev ? nextDev.id : '');
+                } else {
+                    STATE.activeDeviceId = null;
+                    STATE.activeChildId = null;
+                    localStorage.removeItem('active_device_id');
+                    localStorage.removeItem('active_child_id');
+                    App.updateActiveDeviceUI();
+                }
             }
         }
 
+        closeModal('deleteDeviceModal');
         App.renderChildrenCards();
         App.loadStats();
     } catch (e) {
-        console.error('Failed to delete device:', e);
-        UI.showToast('فشل حذف الجهاز: ' + e.message, 'error');
+        console.error('Failed to delete device/child:', e);
+        UI.showToast('فشل الحذف: ' + e.message, 'error');
     } finally {
         if (btn) {
             btn.disabled = false;
@@ -2589,6 +2673,7 @@ async function executeDeviceCompleteDeletion() {
 }
 
 window.openDeleteDeviceModal = openDeleteDeviceModal;
+window.openDeleteChildModal = openDeleteChildModal;
 window.executeDeviceCompleteDeletion = executeDeviceCompleteDeletion;
 
 // Start Application on Load

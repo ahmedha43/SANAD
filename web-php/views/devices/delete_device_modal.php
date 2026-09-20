@@ -12,8 +12,8 @@
                     <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.15rem; color: #ef4444;"></i>
                 </div>
                 <div>
-                    <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #ffffff;">حذف الجهاز وفك كافة القيود نهائياً</h3>
-                    <span style="font-size: 0.78rem; color: #f87171;">إلغاء اقتران دائم ومسح شامل لبيانات الجهاز والرقابة</span>
+                    <h3 id="deleteModalTitle" style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #ffffff;">حذف الجهاز وفك كافة القيود نهائياً</h3>
+                    <span id="deleteModalSubtitle" style="font-size: 0.78rem; color: #f87171;">إلغاء اقتران دائم ومسح شامل لبيانات الجهاز والرقابة</span>
                 </div>
             </div>
             <button class="modal-close-btn" onclick="closeModal('deleteDeviceModal')">✕</button>
@@ -53,6 +53,8 @@
             </p>
 
             <input type="hidden" id="deleteTargetDeviceId" value="">
+            <input type="hidden" id="deleteTargetChildId" value="">
+            <input type="hidden" id="deleteTargetType" value="device">
 
             <div style="display: flex; gap: 10px; justify-content: flex-end;">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('deleteDeviceModal')" style="padding: 0.65rem 1.25rem; font-weight: 600;">

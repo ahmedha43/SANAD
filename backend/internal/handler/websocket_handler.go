@@ -45,10 +45,16 @@ func (h *WSHandler) UpgradeCheck() fiber.Handler {
 				// Kid Agent authentication via device_id and secret
 				devUUID, err := uuid.Parse(deviceID)
 				if err != nil {
+					log.Printf("[WS Auth] Invalid device UUID: %s", deviceID)
 					return fiber.ErrUnauthorized
 				}
 				dev, err := h.repo.GetDeviceByID(c.Context(), devUUID)
-				if err != nil || dev == nil || dev.PairingSecret != deviceSecret {
+				if err != nil || dev == nil {
+					log.Printf("[WS Auth] Device not found in DB: %s, err=%v", deviceID, err)
+					return fiber.ErrUnauthorized
+				}
+				if dev.PairingSecret != deviceSecret {
+					log.Printf("[WS Auth] Secret mismatch for device %s (db: %s, received: %s)", deviceID, dev.PairingSecret, deviceSecret)
 					return fiber.ErrUnauthorized
 				}
 				c.Locals("client_role", ClientRoleKid)
@@ -57,6 +63,7 @@ func (h *WSHandler) UpgradeCheck() fiber.Handler {
 				return c.Next()
 			}
 
+			log.Printf("[WS Auth] Unauthorized WS upgrade: token='%s', devId='%s', secret='%s'", token, deviceID, deviceSecret)
 			return fiber.ErrUnauthorized
 		}
 		return fiber.ErrUpgradeRequired

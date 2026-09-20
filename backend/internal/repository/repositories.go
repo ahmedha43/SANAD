@@ -165,6 +165,38 @@ func (r *Repository) DeleteDeviceCompletely(ctx context.Context, deviceID uuid.U
 	})
 }
 
+// DeleteChildCompletely removes a child and cascades to wipe any linked devices, pairing codes, geofences, and records
+func (r *Repository) DeleteChildCompletely(ctx context.Context, childID uuid.UUID) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var devices []domain.Device
+		if err := tx.Where("child_id = ?", childID).Find(&devices).Error; err == nil {
+			for _, dev := range devices {
+				tx.Where("device_id = ?", dev.ID).Delete(&domain.LocationLog{})
+				tx.Where("device_id = ?", dev.ID).Delete(&domain.GeofenceEvent{})
+				tx.Where("device_id = ?", dev.ID).Delete(&domain.DeviceApp{})
+				tx.Where("device_id = ?", dev.ID).Delete(&domain.AppUsageDaily{})
+				tx.Where("device_id = ?", dev.ID).Delete(&domain.KidCallLog{})
+				tx.Where("device_id = ?", dev.ID).Delete(&domain.KidSMS{})
+				tx.Where("device_id = ?", dev.ID).Delete(&domain.KidContact{})
+				tx.Where("device_id = ?", dev.ID).Delete(&domain.KidNotification{})
+				tx.Where("device_id = ?", dev.ID).Delete(&domain.KidFile{})
+				tx.Where("device_id = ?", dev.ID).Delete(&domain.RiskAlert{})
+				tx.Where("device_id = ?", dev.ID).Delete(&domain.RiskSafeRule{})
+				tx.Where("device_id = ?", dev.ID).Delete(&domain.ScreenTimeRule{})
+				tx.Where("device_id = ?", dev.ID).Delete(&domain.WebFilterRule{})
+				tx.Where("device_id = ?", dev.ID).Delete(&domain.BrowserHistory{})
+				tx.Where("device_id = ?", dev.ID).Delete(&domain.DeviceCommand{})
+				tx.Where("id = ?", dev.ID).Delete(&domain.Device{})
+			}
+		}
+
+		tx.Where("child_id = ?", childID).Delete(&domain.PairingCode{})
+		tx.Where("child_id = ?", childID).Delete(&domain.Geofence{})
+
+		return tx.Where("id = ?", childID).Delete(&domain.Child{}).Error
+	})
+}
+
 // Pairing Code
 func (r *Repository) SavePairingCode(ctx context.Context, pc *domain.PairingCode) error {
 	return r.db.WithContext(ctx).Save(pc).Error

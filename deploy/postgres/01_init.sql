@@ -232,7 +232,31 @@ CREATE TABLE IF NOT EXISTS web_filter_rules (
 
 CREATE INDEX IF NOT EXISTS idx_web_filter_rules_device ON web_filter_rules(device_id);
 
--- 16. Audit Logs
+-- 16. Browser History & Safe Search Log
+CREATE TABLE IF NOT EXISTS browser_histories (
+    id BIGSERIAL PRIMARY KEY,
+    device_id UUID NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+    browser VARCHAR(50) NOT NULL,
+    url TEXT NOT NULL,
+    title TEXT,
+    domain VARCHAR(255),
+    visit_count INT DEFAULT 1,
+    duration_seconds INT DEFAULT 0,
+    is_search BOOLEAN DEFAULT FALSE,
+    search_query VARCHAR(500) DEFAULT '',
+    search_engine VARCHAR(50) DEFAULT '',
+    category VARCHAR(50) DEFAULT 'general',
+    is_blocked BOOLEAN DEFAULT FALSE,
+    visit_time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_browser_hist_dev ON browser_histories(device_id);
+CREATE INDEX IF NOT EXISTS idx_browser_hist_domain ON browser_histories(domain);
+CREATE INDEX IF NOT EXISTS idx_browser_hist_search ON browser_histories(is_search);
+CREATE INDEX IF NOT EXISTS idx_browser_hist_time ON browser_histories(visit_time);
+
+-- 17. Audit Logs
 CREATE TABLE IF NOT EXISTS audit_logs (
     id BIGSERIAL PRIMARY KEY,
     user_id UUID REFERENCES users(id) ON DELETE SET NULL,

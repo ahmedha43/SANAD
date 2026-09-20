@@ -213,7 +213,16 @@ class _DeviceControlScreenState extends State<DeviceControlScreen> {
     );
 
     try {
-      final res = await ApiClient.delete(ApiConstants.deleteDeviceUrl(deviceId));
+      final childId = _device['child_id']?.toString();
+      dynamic res;
+      if (childId != null && childId.isNotEmpty) {
+        res = await ApiClient.delete(ApiConstants.deleteChildUrl(childId));
+        if (res.statusCode >= 400) {
+          res = await ApiClient.delete(ApiConstants.deleteDeviceUrl(deviceId));
+        }
+      } else {
+        res = await ApiClient.delete(ApiConstants.deleteDeviceUrl(deviceId));
+      }
       if (!mounted) return;
       Navigator.pop(context); // dismiss progress
 

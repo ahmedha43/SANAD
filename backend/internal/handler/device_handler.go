@@ -44,10 +44,17 @@ func (h *DeviceHandler) ListDevices(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	// Populate latest locations
+	// Populate latest locations & live online status
 	for i := range devices {
 		loc, _ := h.repo.GetLatestLocation(c.Context(), devices[i].ID)
 		devices[i].LastLocation = loc
+		if h.wsHub != nil {
+			if h.wsHub.IsKidOnline(devices[i].ID.String()) {
+				devices[i].Status = domain.StatusOnline
+			} else {
+				devices[i].Status = domain.StatusOffline
+			}
+		}
 	}
 
 	return c.JSON(devices)
@@ -96,6 +103,56 @@ func (h *DeviceHandler) CreateChild(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(child)
+}
+
+// DeleteChild removes a child profile and cascades to unpair devices and delete records
+func (h *DeviceHandler) DeleteChild(c *fiber.Ctx) error {
+	childIDStr := c.Params("id")
+	childID, err := uuid.Parse(childIDStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid child ID"})
+	}
+
+	familyID, ok := c.Locals("family_id").(uuid.UUID)
+	if !ok {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Family not found in session"})
+	}
+
+	// Verify child belongs to family
+	children, err := h.repo.GetChildrenByFamily(c.Context(), familyID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Database error"})
+	}
+	var targetChild *domain.Child
+	for _, ch := range children {
+		if ch.ID == childID {
+			targetChild = &ch
+			break
+		}
+	}
+	if targetChild == nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Child not found in your family"})
+	}
+
+	// Notify any active devices of this child to unpair and reset
+	devices, _ := h.repo.GetDevicesByFamilyID(c.Context(), familyID)
+	for _, dev := range devices {
+		if dev.ChildID != nil && *dev.ChildID == childID {
+			if h.wsHub != nil {
+				_ = h.wsHub.SendDirectMessageToKid(dev.ID.String(), domain.TypeUnpairAndReset, map[string]interface{}{
+					"action": "UNPAIR_AND_RESET",
+					"reason": "child_deleted_by_parent",
+				})
+				h.wsHub.DisconnectKid(dev.ID.String())
+			}
+		}
+	}
+
+	if err := h.repo.DeleteChildCompletely(c.Context(), childID); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to delete child: " + err.Error()})
+	}
+
+	return c.JSON(fiber.Map{"message": "Child and associated data deleted successfully"})
 }
 
 // GeneratePairingCode produces 6-digit code for linking

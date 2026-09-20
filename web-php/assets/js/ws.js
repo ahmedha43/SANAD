@@ -160,9 +160,54 @@ const WS = {
             case 'NOTIFICATION_FORWARD':
                 App.onDataSync(type, msg.payload || msg);
                 break;
-            case 'HEARTBEAT_PING':
-                UI.updateDeviceOnlineStatus(true, msg.payload?.battery_level);
+            case 'DEVICE_ONLINE': {
+                const devId = msg.from;
+                const dev = STATE.devices?.find(d => d.id === devId);
+                if (dev) {
+                    dev.status = 'online';
+                    dev.is_online = true;
+                }
+                if (devId === STATE.activeDeviceId) {
+                    UI.updateDeviceOnlineStatus(true);
+                }
+                if (window.App && window.App.renderChildrenCards) {
+                    App.renderChildrenCards();
+                }
                 break;
+            }
+            case 'DEVICE_OFFLINE': {
+                const devId = msg.from;
+                const dev = STATE.devices?.find(d => d.id === devId);
+                if (dev) {
+                    dev.status = 'offline';
+                    dev.is_online = false;
+                }
+                if (devId === STATE.activeDeviceId) {
+                    UI.updateDeviceOnlineStatus(false);
+                }
+                if (window.App && window.App.renderChildrenCards) {
+                    App.renderChildrenCards();
+                }
+                break;
+            }
+            case 'HEARTBEAT_PING': {
+                const devId = msg.from;
+                const dev = STATE.devices?.find(d => d.id === devId);
+                if (dev) {
+                    dev.status = 'online';
+                    dev.is_online = true;
+                    if (msg.payload?.battery_level !== undefined) {
+                        dev.battery_level = msg.payload.battery_level;
+                    }
+                }
+                if (devId === STATE.activeDeviceId || !devId) {
+                    UI.updateDeviceOnlineStatus(true, msg.payload?.battery_level);
+                }
+                if (window.App && window.App.renderChildrenCards) {
+                    App.renderChildrenCards();
+                }
+                break;
+            }
             case 'HEARTBEAT_PONG':
                 // Server confirmed WebSocket connection liveness
                 break;

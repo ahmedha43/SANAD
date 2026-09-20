@@ -48,8 +48,8 @@ func NewPostgresDB(cfg *config.Config) (*gorm.DB, error) {
 
 	log.Println("Connected to PostgreSQL successfully")
 
-	// Auto-migrate tables if needed
-	err = db.AutoMigrate(
+	// Auto-migrate tables if needed individually so one failure does not block others
+	models := []interface{}{
 		&domain.User{},
 		&domain.Family{},
 		&domain.Subscription{},
@@ -71,9 +71,11 @@ func NewPostgresDB(cfg *config.Config) (*gorm.DB, error) {
 		&domain.SubscriptionPlan{},
 		&domain.WebFilterRule{},
 		&domain.BrowserHistory{},
-	)
-	if err != nil {
-		log.Printf("GORM AutoMigrate notice: %v", err)
+	}
+	for _, m := range models {
+		if err := db.AutoMigrate(m); err != nil {
+			log.Printf("GORM AutoMigrate notice for %T: %v", m, err)
+		}
 	}
 
 	seedDefaultPlans(db)
