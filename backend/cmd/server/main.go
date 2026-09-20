@@ -142,6 +142,7 @@ func main() {
 	parentDevices.Get("/:id/risk-alerts", requireActiveSub, requireRisk, deviceHandler.GetRiskAlerts)
 	parentDevices.Post("/:id/risk-alerts/:alertId/mark-safe", requireActiveSub, requireRisk, deviceHandler.MarkRiskAlertSafe)
 	parentDevices.Get("/:id/safe-patterns", requireActiveSub, deviceHandler.GetSafeRiskPatterns)
+	parentDevices.Delete("/:id", requireActiveSub, deviceHandler.DeleteDevice)
 
 	// Web Filter Management (Protected)
 	parentDevices.Get("/:id/web-filter", requireActiveSub, webFilterHandler.GetRules)

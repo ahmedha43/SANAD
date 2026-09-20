@@ -13,6 +13,7 @@ require_once __DIR__ . '/../views/gallery/media_modal.php';
 require_once __DIR__ . '/../views/live_stream/screenshot_modal.php';
 require_once __DIR__ . '/../views/settings/e2ee_modal.php';
 require_once __DIR__ . '/../views/settings/device_owner_modal.php';
+require_once __DIR__ . '/../views/devices/delete_device_modal.php';
 ?>
 
 <!-- Toast Notifications Container -->

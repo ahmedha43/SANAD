@@ -134,6 +134,37 @@ func (r *Repository) GetDevicesByFamilyID(ctx context.Context, familyID uuid.UUI
 	return devices, err
 }
 
+// DeleteDeviceCompletely removes a device and executes a complete cascade wipe across all tables
+func (r *Repository) DeleteDeviceCompletely(ctx context.Context, deviceID uuid.UUID) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 1. Delete all operational data & sensor logs
+		tx.Where("device_id = ?", deviceID).Delete(&domain.LocationLog{})
+		tx.Where("device_id = ?", deviceID).Delete(&domain.GeofenceEvent{})
+		tx.Where("device_id = ?", deviceID).Delete(&domain.DeviceApp{})
+		tx.Where("device_id = ?", deviceID).Delete(&domain.AppUsageDaily{})
+		tx.Where("device_id = ?", deviceID).Delete(&domain.KidCallLog{})
+		tx.Where("device_id = ?", deviceID).Delete(&domain.KidSMS{})
+		tx.Where("device_id = ?", deviceID).Delete(&domain.KidContact{})
+		tx.Where("device_id = ?", deviceID).Delete(&domain.KidNotification{})
+		tx.Where("device_id = ?", deviceID).Delete(&domain.KidFile{})
+		tx.Where("device_id = ?", deviceID).Delete(&domain.RiskAlert{})
+		tx.Where("device_id = ?", deviceID).Delete(&domain.RiskSafeRule{})
+		tx.Where("device_id = ?", deviceID).Delete(&domain.ScreenTimeRule{})
+		tx.Where("device_id = ?", deviceID).Delete(&domain.WebFilterRule{})
+		tx.Where("device_id = ?", deviceID).Delete(&domain.BrowserHistory{})
+		tx.Where("device_id = ?", deviceID).Delete(&domain.DeviceCommand{})
+
+		// 2. Delete any pairing codes for this device's child
+		tx.Exec("DELETE FROM pairing_codes WHERE child_id IN (SELECT child_id FROM devices WHERE id = ?)", deviceID)
+
+		// 3. Delete the device entity itself
+		if err := tx.Where("id = ?", deviceID).Delete(&domain.Device{}).Error; err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
 // Pairing Code
 func (r *Repository) SavePairingCode(ctx context.Context, pc *domain.PairingCode) error {
 	return r.db.WithContext(ctx).Save(pc).Error

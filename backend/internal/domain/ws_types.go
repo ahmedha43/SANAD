@@ -56,6 +56,10 @@ const (
 	TypeScreenshotCaptured WSMessageType = "SCREENSHOT_CAPTURED"
 	TypeFetchFileData      WSMessageType = "FETCH_FILE_DATA"
 	TypeFileDataResult     WSMessageType = "FILE_DATA_RESULT"
+
+	// Unpair & Factory Reset
+	TypeUnpairAndReset     WSMessageType = "UNPAIR_AND_RESET"
+	TypeDeviceUnpaired     WSMessageType = "DEVICE_UNPAIRED"
 )
 
 // WSMessage is the standardized envelope for all WebSocket messages

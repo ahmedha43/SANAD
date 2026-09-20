@@ -163,6 +163,11 @@ const App = {
                             <span class="child-status ${isOnline ? 'online' : ''}">${isOnline ? 'متصل' : 'غير متصل'}</span>
                         </div>
                     </div>
+                    ${dev ? `
+                    <button class="child-delete-btn" onclick="event.stopPropagation(); openDeleteDeviceModal('${dev.id}', '${escapeHtml(child.name)}', '${escapeHtml(model)}')" title="حذف هذا الجهاز وفك كافة القيود">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                    ` : ''}
                 </div>
             `;
         }).join('');
@@ -2494,6 +2499,97 @@ function filterContacts(q) {
     );
     App.renderContactsTable(filtered);
 }
+
+// === Device Permanent Deletion & Unpair ===
+function openDeleteDeviceModal(deviceId, childName, modelName) {
+    const targetDevId = deviceId || STATE.activeDeviceId;
+    if (!targetDevId) {
+        UI.showToast('يرجى تحديد جهاز لحذفه', 'warning');
+        return;
+    }
+
+    const dev = STATE.devices.find(d => d.id === targetDevId);
+    const child = dev ? STATE.children.find(c => c.id === dev.child_id) : null;
+
+    const cName = childName || (child ? child.name : 'جهاز الطفل');
+    const mName = modelName || (dev ? dev.model : 'جهاز ذكي');
+
+    const nameEl = document.getElementById('deleteTargetChildName');
+    const infoEl = document.getElementById('deleteTargetDeviceInfo');
+    const idEl = document.getElementById('deleteTargetDeviceId');
+    const iconEl = document.getElementById('deleteTargetIcon');
+
+    if (nameEl) nameEl.textContent = cName;
+    if (infoEl) infoEl.textContent = `${mName} (المعرف: ${targetDevId.substring(0, 8)}...)`;
+    if (idEl) idEl.value = targetDevId;
+    if (iconEl && dev) {
+        const isWindows = dev.os_type === 'windows' ||
+                          (dev.model && dev.model.toLowerCase().includes('windows')) ||
+                          (dev.os_version && dev.os_version.toLowerCase().includes('windows'));
+        iconEl.className = isWindows ? 'fa-solid fa-laptop' : 'fa-solid fa-mobile-screen-button';
+    }
+
+    const modal = document.getElementById('deleteDeviceModal');
+    if (modal) modal.style.display = 'flex';
+}
+
+async function executeDeviceCompleteDeletion() {
+    const idEl = document.getElementById('deleteTargetDeviceId');
+    const deviceId = idEl ? idEl.value : STATE.activeDeviceId;
+    if (!deviceId) {
+        UI.showToast('تعذر العثور على معرف الجهاز المطلوب حذفه', 'error');
+        return;
+    }
+
+    const btn = document.getElementById('btnConfirmDeleteDevice');
+    const originalBtnHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> جاري فك القيود وحذف الجهاز...';
+    }
+
+    try {
+        await API.deleteDevice(deviceId);
+
+        closeModal('deleteDeviceModal');
+        UI.showToast('تم حذف الجهاز وإلغاء اقترانه وفك كافة القيود بنجاح! 🚀', 'success');
+
+        // Remove from local state
+        const removedDev = STATE.devices.find(d => d.id === deviceId);
+        STATE.devices = STATE.devices.filter(d => d.id !== deviceId);
+        if (removedDev) {
+            STATE.children = STATE.children.filter(c => c.id !== removedDev.child_id);
+        }
+
+        if (STATE.activeDeviceId === deviceId) {
+            if (STATE.devices.length > 0) {
+                const nextDev = STATE.devices[0];
+                const nextChild = STATE.children.find(c => c.id === nextDev.child_id);
+                App.selectChild(nextChild ? nextChild.id : '', nextDev.id);
+            } else {
+                STATE.activeDeviceId = null;
+                STATE.activeChildId = null;
+                localStorage.removeItem('active_device_id');
+                localStorage.removeItem('active_child_id');
+                App.updateActiveDeviceUI();
+            }
+        }
+
+        App.renderChildrenCards();
+        App.loadStats();
+    } catch (e) {
+        console.error('Failed to delete device:', e);
+        UI.showToast('فشل حذف الجهاز: ' + e.message, 'error');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalBtnHtml;
+        }
+    }
+}
+
+window.openDeleteDeviceModal = openDeleteDeviceModal;
+window.executeDeviceCompleteDeletion = executeDeviceCompleteDeletion;
 
 // Start Application on Load
 window.addEventListener('DOMContentLoaded', () => App.init());

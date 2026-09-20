@@ -617,3 +617,46 @@ func (h *DeviceHandler) GetDeviceAgentStatus(c *fiber.Ctx) error {
 		"is_monitoring_paused": dev.IsMonitoringPaused,
 	})
 }
+
+// DeleteDevice completely wipes device records and dispatches UNPAIR_AND_RESET to agent
+func (h *DeviceHandler) DeleteDevice(c *fiber.Ctx) error {
+	familyID, ok := c.Locals("family_id").(uuid.UUID)
+	if !ok {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Family not found in session"})
+	}
+
+	deviceIDStr := c.Params("id")
+	deviceID, err := uuid.Parse(deviceIDStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid device ID"})
+	}
+
+	dev, err := h.repo.GetDeviceByID(c.Context(), deviceID)
+	if err != nil || dev == nil || dev.FamilyID != familyID {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "الجهاز غير موجود أو لا ينتمي لهذه العائلة"})
+	}
+
+	// 1. Notify the agent device over WebSocket to wipe all restrictions and unpair
+	if h.wsHub != nil {
+		h.wsHub.SendDirectMessageToKid(deviceID.String(), domain.TypeUnpairAndReset, map[string]interface{}{
+			"action":    "UNPAIR_AND_RESET",
+			"reason":    "تم حذف الجهاز وإلغاء الاقتران بواسطة ولي الأمر",
+			"timestamp": time.Now().UnixMilli(),
+		})
+	}
+
+	// 2. Complete database wipe of device and all associated data
+	if err := h.repo.DeleteDeviceCompletely(c.Context(), deviceID); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": fmt.Sprintf("فشل حذف الجهاز: %v", err)})
+	}
+
+	// 3. Disconnect WebSocket client
+	if h.wsHub != nil {
+		h.wsHub.DisconnectKid(deviceID.String())
+	}
+
+	return c.JSON(fiber.Map{
+		"success": true,
+		"message": "تم حذف الجهاز وإلغاء كافة القيود والبيانات بالكامل",
+	})
+}

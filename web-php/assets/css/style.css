@@ -603,6 +603,39 @@ body {
     box-shadow: 0 0 10px rgba(16, 185, 129, 0.35);
 }
 
+.child-delete-btn {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    color: #f87171;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    opacity: 0.5;
+    z-index: 2;
+}
+
+.child-card:hover .child-delete-btn {
+    opacity: 0.9;
+}
+
+.child-delete-btn:hover {
+    background: #ef4444 !important;
+    border-color: #ef4444 !important;
+    color: #ffffff !important;
+    opacity: 1 !important;
+    transform: scale(1.15);
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.6);
+}
+
 .no-children-banner, .child-card-loading {
     display: flex;
     align-items: center;

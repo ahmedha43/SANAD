@@ -16,6 +16,7 @@ namespace Sanad.Core.Services
 
         public event Action? OnLockRequested;
         public event Action? OnUnlockRequested;
+        public event Action? OnUnpairRequested;
         public event Func<string, Task>? OnSendScreenshotRequested;
         public event Func<Task>? OnSyncBrowserHistoryRequested;
 
@@ -120,6 +121,22 @@ namespace Sanad.Core.Services
                     {
                         await OnSyncBrowserHistoryRequested();
                     }
+                    return (true, null);
+
+                case "UNPAIR_AND_RESET":
+                    Console.WriteLine("[CommandHandler] UNPAIR_AND_RESET received. Resetting all restrictions and wiping pairing...");
+                    _configService.Current.IsDeviceLocked = false;
+                    OnUnlockRequested?.Invoke();
+                    _audioAlarmService.StopAlarm();
+                    _configService.Current.BlockedProcesses.Clear();
+                    _configService.Current.BlockedDomains.Clear();
+                    _configService.Current.IsMonitoringPaused = false;
+                    _configService.Current.DeviceId = null;
+                    _configService.Current.PairingSecret = null;
+                    _configService.Current.FamilyId = null;
+                    _configService.Current.ChildId = null;
+                    _configService.Save(_configService.Current);
+                    OnUnpairRequested?.Invoke();
                     return (true, null);
 
                 default:

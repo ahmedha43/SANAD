@@ -43,6 +43,7 @@ import com.parentalcontrol.kidsagent.data.db.AppDatabase
 import com.parentalcontrol.kidsagent.data.db.OfflineCallLogEntity
 import com.parentalcontrol.kidsagent.data.db.OfflineRiskAlertEntity
 import com.parentalcontrol.kidsagent.sync.OfflineSyncWorker
+import androidx.work.WorkManager
 
 class ForegroundSyncService : Service() {
 
@@ -584,6 +585,10 @@ class ForegroundSyncService : Service() {
                 syncBlockedPackagesFromServer()
                 Log.i(TAG, "RESUME_MONITORING applied via WS")
             }
+            "UNPAIR_AND_RESET" -> {
+                Log.w(TAG, "Received UNPAIR_AND_RESET direct message. Unpairing device...")
+                unpairAndResetDevice()
+            }
         }
     }
 
@@ -733,6 +738,13 @@ class ForegroundSyncService : Service() {
                     syncBlockedPackagesFromServer()
                     Log.i(TAG, "RESUME_MONITORING command executed")
                 }
+                "UNPAIR_AND_RESET" -> {
+                    Log.w(TAG, "UNPAIR_AND_RESET command received via executeCommand")
+                    scope.launch {
+                        delay(500)
+                        unpairAndResetDevice()
+                    }
+                }
                 else -> {
                     success = false
                     errorMsg = "Unknown command action: ${cmd.action}"
@@ -750,6 +762,93 @@ class ForegroundSyncService : Service() {
             error = errorMsg
         )
         wsClient?.sendMessage("COMMAND_ACK", ack)
+    }
+
+    /**
+     * Completely unpairs the device, wipes all parental control data, removes all DeviceOwner
+     * restrictions, clears offline storage, resets all security blocks, and stops background services.
+     */
+    private fun unpairAndResetDevice() {
+        Log.w(TAG, "Executing UNPAIR_AND_RESET: Removing all restrictions, data, and unpairing device...")
+        try {
+            // 1. Restore app launcher icon visibility
+            try {
+                val p = packageManager
+                val component = ComponentName(this, MainActivity::class.java)
+                p.setComponentEnabledSetting(
+                    component,
+                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                    PackageManager.DONT_KILL_APP
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "Error restoring app icon: ${e.message}")
+            }
+
+            // 2. Unlock device screen & dismiss overlay lock
+            unlockDeviceScreen()
+
+            // 3. Stop alarm
+            stopAlarmSound()
+
+            // 4. Stop WebRTC streaming
+            webRTCManager?.stopStreaming()
+            webRTCManager?.dispose()
+
+            // 5. Clear all blocked packages
+            synchronized(blockedPackages) {
+                blockedPackages.clear()
+            }
+            saveBlockedPackages(this)
+
+            // 6. Clear web filter rules
+            saveWebFilterRules(this, false, emptyList(), emptyList())
+
+            // 7. Clear screen time rules
+            screenTimeRule = null
+            KidsAgentApp.instance.prefs.edit().remove("screen_time_rule_json").apply()
+
+            // 8. Clear safe risk patterns
+            com.parentalcontrol.kidsagent.safety.RiskDetector.setSafePatterns(emptyList())
+            val safetyPrefs = getSharedPreferences("kids_agent_safety", Context.MODE_PRIVATE)
+            safetyPrefs.edit().clear().apply()
+
+            // 9. Reset security prefs (anti-uninstall, block settings, stealth mode)
+            AgentAccessibilityService.isAntiUninstallEnabled = false
+            AgentAccessibilityService.isBlockSettingsEnabled = false
+            val secPrefs = getSharedPreferences("security_prefs", Context.MODE_PRIVATE)
+            secPrefs.edit().clear().apply()
+
+            // 10. Clear Device Owner enterprise restrictions (unblock uninstall, remove user restrictions)
+            DeviceOwnerManager.clearAllRestrictions(this)
+
+            // 11. Cancel all background workers
+            try {
+                WorkManager.getInstance(this).cancelAllWork()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error cancelling workers: ${e.message}")
+            }
+
+            // 12. Wipe offline database
+            scope.launch(Dispatchers.IO) {
+                try {
+                    appDb.clearAllTables()
+                    Log.i(TAG, "Local Room database cleared completely.")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error clearing local DB: ${e.message}")
+                }
+            }
+
+            // 13. Wipe pairing credentials
+            KidsAgentApp.instance.clearPairing()
+
+            // 14. Disconnect WebSocket and stop foreground service
+            wsClient?.disconnect()
+            stopForeground(true)
+            stopSelf()
+            Log.w(TAG, "UNPAIR_AND_RESET successfully executed. Device is now completely free of restrictions.")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error during unpairAndResetDevice: ${e.message}", e)
+        }
     }
 
     private fun lockDeviceScreen(reason: String = "تم قفل الهاتف بواسطة منظومة سَنَد") {

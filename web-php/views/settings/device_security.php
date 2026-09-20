@@ -111,4 +111,23 @@ declare(strict_types=1);
             </div>
         </div>
     </div>
+
+    <!-- Danger Zone: Permanent Device Wipe & Unpair -->
+    <div style="margin-top: 1.5rem; background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: var(--radius-md); padding: 1.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <h4 style="font-size: 1rem; font-weight: 700; color: #ef4444; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <span>منطقة الخطر: حذف الجهاز وفك كافة القيود نهائياً (Unpair & Wipe Device)</span>
+                </h4>
+                <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0; line-height: 1.5;">
+                    يتم إرسال أمر فوري للجهاز لفك كافة القيود، وإلغاء حظر التطبيقات، وإزالة قيود Device Owner لإتاحة حذفه بحرية، ومسح كافة سجلاته وبياناته من السحابة نهائياً.
+                </p>
+            </div>
+            <button class="btn btn-danger" onclick="openDeleteDeviceModal(STATE.activeDeviceId)" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none; padding: 0.7rem 1.4rem; border-radius: var(--radius-sm); font-weight: 800; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.35); transition: all 0.2s ease;">
+                <i class="fa-solid fa-trash-can"></i>
+                <span>حذف هذا الجهاز وفك القيود</span>
+            </button>
+        </div>
+    </div>
 </section>

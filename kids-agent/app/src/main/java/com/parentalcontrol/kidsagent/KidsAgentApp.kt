@@ -91,4 +91,8 @@ class KidsAgentApp : Application() {
             .putString(KEY_SERVER_URL, serverUrl)
             .apply()
     }
+
+    fun clearPairing() {
+        prefs.edit().clear().apply()
+    }
 }

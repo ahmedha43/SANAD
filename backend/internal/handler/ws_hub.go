@@ -154,6 +154,54 @@ func (h *WSHub) SyncSafePatternsToKid(deviceID uuid.UUID, patterns []string) boo
 	}
 }
 
+// SendDirectMessageToKid sends an arbitrary WSMessage directly to a kid device
+func (h *WSHub) SendDirectMessageToKid(deviceID string, msgType domain.WSMessageType, payload interface{}) bool {
+	h.RLock()
+	client, ok := h.kids[deviceID]
+	h.RUnlock()
+	if !ok || client == nil {
+		return false
+	}
+
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return false
+	}
+
+	msg := domain.WSMessage{
+		Type:      msgType,
+		From:      "server",
+		To:        deviceID,
+		Payload:   payloadBytes,
+		Timestamp: time.Now().UnixMilli(),
+	}
+	raw, err := json.Marshal(msg)
+	if err != nil {
+		return false
+	}
+
+	select {
+	case client.Send <- raw:
+		log.Printf("[WS Hub] Direct message %s dispatched to kid %s", msgType, deviceID)
+		return true
+	default:
+		log.Printf("[WS Hub] Failed to send %s to kid %s: queue full", msgType, deviceID)
+		return false
+	}
+}
+
+// DisconnectKid disconnects and unregisters a kid WebSocket client
+func (h *WSHub) DisconnectKid(deviceID string) {
+	h.Lock()
+	client, ok := h.kids[deviceID]
+	if ok && client != nil {
+		delete(h.kids, deviceID)
+		client.SafeClose()
+		log.Printf("[WS Hub] Disconnected kid device: %s", deviceID)
+	}
+	h.Unlock()
+}
+
 // BroadcastToFamily broadcasts a message to parents in a family
 func (h *WSHub) BroadcastToFamily(familyID string, msg domain.WSMessage) {
 	h.Lock()

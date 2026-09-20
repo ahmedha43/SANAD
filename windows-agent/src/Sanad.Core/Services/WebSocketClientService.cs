@@ -209,6 +209,19 @@ namespace Sanad.Core.Services
                 var fromSender = root.TryGetProperty("from", out var fProp) ? fProp.GetString() : string.Empty;
                 var hasPayload = root.TryGetProperty("payload", out var payloadProp);
 
+                // Handle UNPAIR_AND_RESET direct message
+                if (type == "UNPAIR_AND_RESET")
+                {
+                    Log("[WS] UNPAIR_AND_RESET message received from server. Wiping local state...");
+                    await _commandHandler.HandleCommandAsync("UNPAIR_AND_RESET", null);
+                    try
+                    {
+                        await _ws!.CloseAsync(WebSocketCloseStatus.NormalClosure, "Unpaired by parent", CancellationToken.None);
+                    }
+                    catch { }
+                    return;
+                }
+
                 // 1. Direct TAKE_SCREENSHOT command
                 if (type == "TAKE_SCREENSHOT")
                 {

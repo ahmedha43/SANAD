@@ -13,6 +13,7 @@ class ApiConstants {
 
   // Device endpoints
   static String get devicesUrl => '$baseUrl/api/v1/devices';
+  static String deleteDeviceUrl(String deviceId) => '$baseUrl/api/v1/devices/$deviceId';
   static String get childrenUrl => '$baseUrl/api/v1/devices/children';
   static String pairCodeUrl(String childId) => '$baseUrl/api/v1/devices/children/$childId/pair-code';
   static String commandUrl(String deviceId) => '$baseUrl/api/v1/devices/$deviceId/command';

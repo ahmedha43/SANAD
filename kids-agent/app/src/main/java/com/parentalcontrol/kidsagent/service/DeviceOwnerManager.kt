@@ -107,6 +107,34 @@ object DeviceOwnerManager {
     }
 
     /**
+     * Completely removes all enterprise restrictions, unblocks uninstall, and resets Device Owner constraints.
+     */
+    fun clearAllRestrictions(context: Context): Boolean {
+        val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as? DevicePolicyManager ?: return false
+        val admin = getAdminComponent(context)
+
+        try {
+            if (isDeviceOwner(context)) {
+                // 1. Unblock uninstall
+                dpm.setUninstallBlocked(admin, context.packageName, false)
+                Log.i(TAG, "Uninstall protection removed for ${context.packageName}")
+
+                // 2. Clear user restrictions
+                dpm.clearUserRestriction(admin, UserManager.DISALLOW_FACTORY_RESET)
+                dpm.clearUserRestriction(admin, UserManager.DISALLOW_SAFE_BOOT)
+                dpm.clearUserRestriction(admin, UserManager.DISALLOW_REMOVE_USER)
+                dpm.clearUserRestriction(admin, UserManager.DISALLOW_APPS_CONTROL)
+                Log.i(TAG, "Enterprise user restrictions successfully cleared")
+            }
+            return true
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to clear enterprise restrictions: ${e.message}", e)
+            return false
+        }
+    }
+
+
+    /**
      * Gathers current enterprise status to report to Parent Dashboard
      */
     fun getStatusMap(context: Context): Map<String, Any> {

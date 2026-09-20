@@ -184,6 +184,160 @@ class _DeviceControlScreenState extends State<DeviceControlScreen> {
     }
   }
 
+  Future<void> _deleteDevice() async {
+    final deviceId = _device['id']?.toString();
+    if (deviceId == null) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: Card(
+          color: Color(0xFF1E293B),
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(color: Colors.redAccent),
+                SizedBox(width: 16),
+                Text(
+                  'جاري حذف وفك قيود الجهاز...',
+                  style: TextStyle(color: Colors.white, fontSize: 15),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    try {
+      final res = await ApiClient.delete(ApiConstants.deleteDeviceUrl(deviceId));
+      if (!mounted) return;
+      Navigator.pop(context); // dismiss progress
+
+      if (res.statusCode == 200 || res.statusCode == 204) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم حذف الجهاز وإلغاء اقترانه وفك كافة القيود بنجاح! 🚀'),
+            backgroundColor: Color(0xFF10B981),
+          ),
+        );
+        widget.onDeviceUpdated?.call();
+        Navigator.pop(context, true); // Return to parent device list
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('فشل حذف الجهاز: ${res.body}'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // dismiss progress
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('حدث خطأ أثناء حذف الجهاز: $e'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
+  }
+
+  void _showDeleteDeviceDialog() {
+    final childName = _device['child']?['name'] ?? 'Child';
+    final model = _device['model'] ?? 'Device';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF111827),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: Colors.red.withOpacity(0.4), width: 1.5),
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 28),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'حذف الجهاز نهائياً',
+                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'هل أنت متأكد من رغبتك في حذف جهاز ($childName - $model) وإلغاء اقترانه نهائياً؟',
+              style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.red.withOpacity(0.2)),
+              ),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('ما سيحدث فوراً عند الحذف:', style: TextStyle(color: Colors.redAccent, fontSize: 13, fontWeight: FontWeight.bold)),
+                  SizedBox(height: 6),
+                  Text('• فك قفل الشاشة وإلغاء حظر كافة التطبيقات والمواقع.', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                  SizedBox(height: 4),
+                  Text('• إزالة قيود Device Owner وتمكين حذف الأيجنت من الهاتف.', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                  SizedBox(height: 4),
+                  Text('• تصفير قاعدة بيانات الهاتف المحلية وإلغاء مفاتيح الاقتران.', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                  SizedBox(height: 4),
+                  Text('• حذف كافة سجلات التصفح والموقع والمكالمات والصور من السحابة.', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              '⚠️ هذا الإجراء فوري ونهائي ولا يمكن التراجع عنه.',
+              style: TextStyle(color: Colors.white54, fontSize: 11),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('إلغاء التراجع', style: TextStyle(color: Colors.white70)),
+          ),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            icon: const Icon(Icons.delete_forever, size: 18),
+            label: const Text('نعم، احذف وفك القيود', style: TextStyle(fontWeight: FontWeight.bold)),
+            onPressed: () {
+              Navigator.pop(ctx);
+              _deleteDevice();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   void _sendCommand(String action, String successMsg) {
     final deviceId = _device['id'];
     WebSocketService().sendCommand(deviceId, action);
@@ -870,6 +1024,11 @@ class _DeviceControlScreenState extends State<DeviceControlScreen> {
         centerTitle: true,
         actions: [
           IconButton(
+            icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+            tooltip: 'حذف الجهاز نهائياً',
+            onPressed: _showDeleteDeviceDialog,
+          ),
+          IconButton(
             icon: _isRefreshing
                 ? const SizedBox(
                     width: 18,
@@ -935,8 +1094,77 @@ class _DeviceControlScreenState extends State<DeviceControlScreen> {
               _buildLogsGrid(),
               const SizedBox(height: 24),
             ],
+            if (_selectedCategory == 'all' || _selectedCategory == 'security') ...[
+              _buildDangerZoneSection(),
+              const SizedBox(height: 32),
+            ],
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildDangerZoneSection() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.red.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.red.withOpacity(0.35), width: 1.2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.warning_rounded, color: Colors.redAccent, size: 22),
+              ),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'منطقة الخطر: إلغاء اقتران وحذف الجهاز',
+                      style: TextStyle(color: Colors.redAccent, fontSize: 15, fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'إزالة جميع القيود وحذف بيانات الجهاز من السحابة نهائياً',
+                      style: TextStyle(color: Colors.white60, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFEF4444),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                elevation: 3,
+              ),
+              icon: const Icon(Icons.delete_forever, size: 20),
+              label: const Text(
+                'حذف الجهاز وإلغاء الاقتران وفك القيود',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+              onPressed: _showDeleteDeviceDialog,
+            ),
+          ),
+        ],
       ),
     );
   }
