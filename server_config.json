@@ -1,5 +1,5 @@
 {
-  "server_ip": "192.168.88.54",
+  "server_ip": "192.168.1.106",
   "backend_port": 8080,
   "admin_panel_port": 8088,
   "parent_dashboard_port": 8089,
@@ -7,5 +7,5 @@
   "coturn_tls_port": 5349,
   "coturn_username": "parentalctl",
   "coturn_credential": "SecureTurnSecretPass2026",
-  "last_updated": "2026-09-20T21:29:13.395643+00:00"
+  "last_updated": "2026-09-20T22:40:28.909856+00:00"
 }

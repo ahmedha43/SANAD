@@ -1604,7 +1604,7 @@ async function loadBrowserHistory(force = false) {
 
     try {
         const [historyRes, statsRes] = await Promise.allSettled([
-            API.getBrowserHistory(STATE.activeDeviceId, { limit: 100 }),
+            API.getBrowserHistory(STATE.activeDeviceId, { limit: 150 }),
             API.getBrowserHistoryStats(STATE.activeDeviceId)
         ]);
 
@@ -1623,7 +1623,7 @@ async function loadBrowserHistory(force = false) {
         console.error('Failed to load browser history:', e);
         const tbody = document.getElementById('browserHistoryTableBody');
         if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="9" class="text-center text-danger" style="padding: 20px;">فشل تحميل سجل التصفح: ${e.message}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="9" class="text-center text-danger" style="padding: 25px;">فشل تحميل سجل التصفح: ${e.message}</td></tr>`;
         }
     } finally {
         if (spin) spin.classList.remove('fa-spin');
@@ -1632,36 +1632,92 @@ async function loadBrowserHistory(force = false) {
 
 function renderBrowserHistoryUI() {
     const stats = browserHistoryState.stats;
-    if (stats) {
-        const statToday = document.getElementById('statHistoryTodayVisits');
-        if (statToday) statToday.textContent = (stats.today_visits || 0).toLocaleString();
+    const items = browserHistoryState.items || [];
 
-        const statSearches = document.getElementById('statHistoryTotalSearches');
-        if (statSearches) statSearches.textContent = (stats.total_searches || 0).toLocaleString();
+    // 1. Stats Cards
+    const statTotalSites = document.getElementById('statHistoryTotalSites');
+    if (statTotalSites) {
+        const totalVisits = (stats && stats.total_visits) ? stats.total_visits : items.length;
+        statTotalSites.textContent = totalVisits.toLocaleString();
+    }
+    const statTodaySub = document.getElementById('statHistoryTodaySub');
+    if (statTodaySub && stats && stats.today_visits !== undefined) {
+        statTodaySub.textContent = `زيارات اليوم: ${stats.today_visits} موقع`;
+    }
 
-        const statBlocked = document.getElementById('statHistoryBlockedHits');
-        if (statBlocked) statBlocked.textContent = (stats.blocked_hits || 0).toLocaleString();
+    const statSearches = document.getElementById('statHistoryTotalSearches');
+    if (statSearches) {
+        const totalSearches = (stats && stats.total_searches) ? stats.total_searches : items.filter(i => i.is_search_query || i.search_query).length;
+        statSearches.textContent = totalSearches.toLocaleString();
+    }
 
-        // Render Top Searches Container
-        const searchContainer = document.getElementById('topSearchesContainer');
-        if (searchContainer) {
-            if (stats.top_searches && stats.top_searches.length > 0) {
-                searchContainer.innerHTML = stats.top_searches.map(s => `
-                    <div class="search-keyword-chip" onclick="applyHistorySearchFilter('${escapeHtml(s.query)}')">
-                        <i class="fa-solid fa-magnifying-glass text-cyan"></i>
-                        <span class="kw-text">${escapeHtml(s.query)}</span>
-                        <span class="kw-count">${s.count}</span>
-                    </div>
-                `).join('');
-            } else {
-                searchContainer.innerHTML = '<span class="text-muted" style="font-size: 0.85rem;">لا توجد عمليات بحث مسجلة حتى الآن.</span>';
+    const statTopDomain = document.getElementById('statHistoryTopDomain');
+    const statTopDomainCount = document.getElementById('statHistoryTopDomainCount');
+    if (statTopDomain && statTopDomainCount) {
+        if (stats && stats.top_domains && stats.top_domains.length > 0) {
+            statTopDomain.textContent = stats.top_domains[0].domain;
+            statTopDomain.title = stats.top_domains[0].domain;
+            statTopDomainCount.textContent = `${stats.top_domains[0].count} زيارة مسجلة`;
+        } else if (items.length > 0) {
+            // Calculate top domain locally
+            const domCounts = {};
+            items.forEach(i => { if (i.domain) domCounts[i.domain] = (domCounts[i.domain] || 0) + (i.visit_count || 1); });
+            const sortedDom = Object.entries(domCounts).sort((a, b) => b[1] - a[1]);
+            if (sortedDom.length > 0) {
+                statTopDomain.textContent = sortedDom[0][0];
+                statTopDomain.title = sortedDom[0][0];
+                statTopDomainCount.textContent = `${sortedDom[0][1]} زيارة مسجلة`;
             }
+        } else {
+            statTopDomain.textContent = '--';
+            statTopDomainCount.textContent = 'لا توجد زيارات مسجلة';
         }
     }
 
-    const items = browserHistoryState.items || [];
+    const statBlockedInfo = document.getElementById('statHistoryBlockedInfo');
+    if (statBlockedInfo) {
+        const blockedCount = (stats && stats.blocked_hits) ? stats.blocked_hits : items.filter(i => i.is_blocked).length;
+        statBlockedInfo.textContent = `تم منع ${blockedCount} محاولة محظورة`;
+    }
 
-    // Filter pill counts
+    // 2. Search Keywords Cloud (Radar for Google & YouTube)
+    const searchContainer = document.getElementById('topSearchesContainer');
+    if (searchContainer) {
+        let topSearches = (stats && stats.top_searches && stats.top_searches.length > 0) ? stats.top_searches : [];
+        if (topSearches.length === 0) {
+            // Extract from items locally if stats not populated yet
+            const qMap = {};
+            items.forEach(i => {
+                const q = i.search_query || (i.is_search_query ? i.title : null);
+                if (q && q.trim().length > 1) {
+                    qMap[q.trim()] = (qMap[q.trim()] || 0) + (i.visit_count || 1);
+                }
+            });
+            topSearches = Object.entries(qMap).map(([query, count]) => ({ query, count })).sort((a, b) => b.count - a.count).slice(0, 15);
+        }
+
+        if (topSearches.length > 0) {
+            searchContainer.innerHTML = topSearches.map(s => {
+                const isYouTube = s.query.toLowerCase().includes('youtube') || s.query.toLowerCase().includes('فيديو') || s.query.toLowerCase().includes('اغنية') || s.query.toLowerCase().includes('مقطع');
+                const engineIcon = isYouTube ? '<i class="fa-brands fa-youtube" style="color: #ef4444;"></i>' : '<i class="fa-brands fa-google" style="color: #4285f4;"></i>';
+                const chipBg = isYouTube ? 'rgba(239, 68, 68, 0.12)' : 'rgba(139, 92, 246, 0.15)';
+                const chipBorder = isYouTube ? 'rgba(239, 68, 68, 0.35)' : 'rgba(139, 92, 246, 0.35)';
+                const badgeColor = isYouTube ? '#ef4444' : '#8b5cf6';
+
+                return `
+                    <div class="search-keyword-chip" style="background: ${chipBg}; border-color: ${chipBorder};" onclick="applyHistorySearchFilter('${escapeHtml(s.query)}')" title="تصفية السجل بعبارة: ${escapeHtml(s.query)}">
+                        ${engineIcon}
+                        <span class="kw-text" style="font-weight: 600;">${escapeHtml(s.query)}</span>
+                        <span class="kw-count" style="background: ${badgeColor};">${s.count}</span>
+                    </div>
+                `;
+            }).join('');
+        } else {
+            searchContainer.innerHTML = '<span class="text-muted" style="font-size: 0.85rem;"><i class="fa-solid fa-info-circle"></i> لا توجد استعلامات بحث مسجلة حتى الآن من Google أو YouTube.</span>';
+        }
+    }
+
+    // 3. Filter Pill Counts
     const searchesCount = items.filter(i => i.is_search_query || i.search_query).length;
     const blockedCount = items.filter(i => i.is_blocked).length;
 
@@ -1672,11 +1728,14 @@ function renderBrowserHistoryUI() {
     const countBlockedEl = document.getElementById('countBlockedHistory');
     if (countBlockedEl) countBlockedEl.textContent = blockedCount;
 
-    // Apply Filter & Search
+    // 4. Apply Filters
     let displayItems = [...items];
     const filter = browserHistoryState.currentFilter;
     if (filter === 'searches') {
         displayItems = displayItems.filter(i => i.is_search_query || i.search_query);
+    } else if (filter === 'top-visited') {
+        // Sort by visit count descending for most frequent
+        displayItems.sort((a, b) => (b.visit_count || 1) - (a.visit_count || 1));
     } else if (filter === 'blocked') {
         displayItems = displayItems.filter(i => i.is_blocked);
     } else if (filter === 'chrome') {
@@ -1687,6 +1746,7 @@ function renderBrowserHistoryUI() {
         displayItems = displayItems.filter(i => (i.browser || '').toLowerCase().includes('firefox'));
     }
 
+    // Apply Live Search Query
     if (browserHistoryState.searchQuery) {
         const q = browserHistoryState.searchQuery.toLowerCase();
         displayItems = displayItems.filter(i => 
@@ -1697,15 +1757,17 @@ function renderBrowserHistoryUI() {
         );
     }
 
+    // 5. Render Table Rows
     const tbody = document.getElementById('browserHistoryTableBody');
     if (!tbody) return;
 
     if (displayItems.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="9" class="text-center text-muted" style="padding: 35px;">
-                    <i class="fa-solid fa-clock-rotate-left" style="font-size: 2rem; opacity: 0.3; margin-bottom: 8px; display: block;"></i>
-                    لا توجد سجلات تصفح تطابق الفلتر المحدد
+                <td colspan="9" class="text-center text-muted" style="padding: 40px;">
+                    <i class="fa-solid fa-clock-rotate-left" style="font-size: 2.4rem; opacity: 0.25; margin-bottom: 12px; display: block;"></i>
+                    <div style="font-size: 1rem; color: #cbd5e1;">لا توجد سجلات تصفح أو بحث تطابق هذا الفلتر</div>
+                    <span class="sub-text" style="font-size: 0.8rem; color: #64748b;">تأكد من اختيار جهاز نشط ومزامنة متصفحات الويب</span>
                 </td>
             </tr>
         `;
@@ -1714,58 +1776,90 @@ function renderBrowserHistoryUI() {
 
     tbody.innerHTML = displayItems.map((item, idx) => {
         // Browser Icon
-        let browserIcon = '<i class="fa-brands fa-chrome text-danger" title="Google Chrome"></i>';
+        let browserIcon = '<i class="fa-brands fa-chrome" style="color: #ea4335;" title="Google Chrome"></i>';
         const b = (item.browser || '').toLowerCase();
         if (b.includes('edge')) {
-            browserIcon = '<i class="fa-brands fa-edge text-primary" title="Microsoft Edge"></i>';
+            browserIcon = '<i class="fa-brands fa-edge" style="color: #0078d7;" title="Microsoft Edge"></i>';
         } else if (b.includes('firefox')) {
             browserIcon = '<i class="fa-brands fa-firefox-browser" style="color: #ff7139;" title="Mozilla Firefox"></i>';
         } else if (b.includes('android')) {
-            browserIcon = '<i class="fa-brands fa-android text-emerald" title="Android Browser"></i>';
+            browserIcon = '<i class="fa-brands fa-android" style="color: #10b981;" title="متصفح أندرويد"></i>';
         }
 
         // Search highlight vs regular URL
         let urlDisplay = '';
         let activityBadge = '';
         if (item.is_search_query || item.search_query) {
-            const platform = (item.domain || '').includes('youtube') ? 'YouTube' : 'Google';
-            activityBadge = `<span class="status-badge" style="background: rgba(139, 92, 246, 0.2); color: #c084fc; border: 1px solid rgba(139, 92, 246, 0.4);"><i class="fa-solid fa-magnifying-glass"></i> بحث ${platform}</span>`;
-            urlDisplay = `<div style="display: flex; align-items: center; gap: 6px; margin-bottom: 2px;">
-                <span class="search-term-highlight">🔍 ${escapeHtml(item.search_query || item.title)}</span>
-            </div>
-            <a href="${escapeHtml(item.url)}" target="_blank" rel="noopener" class="sub-text text-truncate" style="max-width: 320px; display: inline-block; color: rgba(255,255,255,0.4); font-size: 0.75rem;">${escapeHtml(item.url)}</a>`;
+            const isYt = (item.domain || '').includes('youtube');
+            const platform = isYt ? 'YouTube' : 'Google';
+            const icon = isYt ? '<i class="fa-brands fa-youtube" style="color: #ef4444;"></i>' : '<i class="fa-brands fa-google" style="color: #4285f4;"></i>';
+            activityBadge = `<span class="status-badge" style="background: rgba(139, 92, 246, 0.2); color: #c084fc; border: 1px solid rgba(139, 92, 246, 0.4);">${icon} بحث ${platform}</span>`;
+            urlDisplay = `
+                <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 2px;">
+                    <span class="search-term-highlight">🔍 ${escapeHtml(item.search_query || item.title)}</span>
+                </div>
+                <a href="${escapeHtml(item.url)}" target="_blank" rel="noopener" class="sub-text text-truncate" style="max-width: 320px; display: inline-block; color: rgba(255,255,255,0.4); font-size: 0.75rem;" title="${escapeHtml(item.url)}">${escapeHtml(item.url)}</a>
+            `;
         } else {
-            activityBadge = '<span class="status-badge" style="background: rgba(6, 182, 212, 0.15); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.3);"><i class="fa-solid fa-globe"></i> زيارة موقع</span>';
-            urlDisplay = `<a href="${escapeHtml(item.url)}" target="_blank" rel="noopener" class="text-truncate" style="max-width: 380px; display: inline-block; color: var(--accent-cyan);" title="${escapeHtml(item.url)}">${escapeHtml(item.url)}</a>`;
+            activityBadge = `<span class="status-badge" style="background: rgba(6, 182, 212, 0.15); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.3);"><i class="fa-solid fa-globe"></i> زيارة موقع</span>`;
+            urlDisplay = `<a href="${escapeHtml(item.url)}" target="_blank" rel="noopener" class="text-truncate" style="max-width: 380px; display: inline-block; color: var(--accent-cyan); font-weight: 500;" title="${escapeHtml(item.url)}">${escapeHtml(item.url)}</a>`;
         }
 
         // Status Badge
         const statusBadge = item.is_blocked
-            ? '<span class="status-badge status-badge-paused"><i class="fa-solid fa-ban"></i> محظور</span>'
+            ? '<span class="status-badge status-badge-paused"><i class="fa-solid fa-ban"></i> محظور 🚫</span>'
             : '<span class="status-badge status-badge-active"><i class="fa-solid fa-circle-check"></i> تم التصفح</span>';
 
-        // Block Action Button
+        // Instant Block Button: calls API.createWebFilterRule directly
         const blockBtn = item.is_blocked
-            ? `<button class="btn btn-outline-sm text-muted" disabled style="opacity: 0.6;"><i class="fa-solid fa-lock"></i> محظور</button>`
-            : `<button class="btn btn-outline-sm text-danger" onclick="quickBlockBrowserDomain('${escapeHtml(item.domain)}', '${escapeHtml(item.title || item.domain)}')" title="حظر هذا النطاق فوراً"><i class="fa-solid fa-ban"></i> حظر الموقع</button>`;
+            ? `<button class="btn btn-outline-sm text-muted" disabled style="opacity: 0.55; cursor: not-allowed;"><i class="fa-solid fa-lock"></i> محظور</button>`
+            : `<button class="btn btn-outline-sm text-danger" onclick="quickBlockBrowserDomain('${escapeHtml(item.domain)}', '${escapeHtml(item.title || item.domain)}')" title="حظر هذا الموقع فوراً وإضافته لمحرك الفلترة"><i class="fa-solid fa-ban"></i> حظر هذا الموقع</button>`;
 
-        // Time format
-        const visitedTime = item.visited_at ? (typeof formatRelativeTime === 'function' ? formatRelativeTime(item.visited_at) : item.visited_at) : '-';
+        // Date and Time Formatting
+        let formattedDate = '-';
+        if (item.visited_at) {
+            try {
+                const d = new Date(item.visited_at);
+                formattedDate = d.toLocaleString('ar-EG', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                });
+            } catch (_) {
+                formattedDate = item.visited_at;
+            }
+        }
 
         return `
             <tr class="${item.is_blocked ? 'row-blocked' : ''}">
                 <td class="text-muted" style="font-size: 0.8rem;">${idx + 1}</td>
-                <td><div style="display: flex; align-items: center; gap: 8px; font-size: 1.1rem;">${browserIcon} <span style="font-size: 0.8rem; text-transform: capitalize;">${escapeHtml(item.browser)}</span></div></td>
+                <td>
+                    <div style="display: flex; align-items: center; gap: 8px; font-size: 1.15rem;">
+                        ${browserIcon}
+                        <span style="font-size: 0.82rem; text-transform: capitalize; color: #cbd5e1;">${escapeHtml(item.browser)}</span>
+                    </div>
+                </td>
                 <td>
                     <div style="font-weight: 600; color: #fff; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(item.title || item.domain)}">
                         ${escapeHtml(item.title || item.domain)}
                     </div>
-                    <span class="sub-text" style="font-size: 0.75rem; color: #94a3b8;"><i class="fa-solid fa-link" style="font-size: 0.7rem;"></i> ${escapeHtml(item.domain)}</span>
+                    <span class="sub-text" style="font-size: 0.75rem; color: #94a3b8; display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+                        <i class="fa-solid fa-link" style="font-size: 0.68rem; color: var(--accent-cyan);"></i> ${escapeHtml(item.domain)}
+                    </span>
                 </td>
                 <td>${urlDisplay}</td>
                 <td>${activityBadge}</td>
-                <td style="text-align: center;"><span class="badge" style="background: rgba(255,255,255,0.08); font-size: 0.8rem; padding: 2px 8px; border-radius: 6px;">${item.visit_count || 1}</span></td>
-                <td style="font-size: 0.8rem; color: #94a3b8;" title="${item.visited_at}">${visitedTime}</td>
+                <td style="text-align: center;">
+                    <span class="badge" style="background: rgba(255,255,255,0.08); font-size: 0.8rem; padding: 3px 9px; border-radius: 6px; font-weight: 700; color: #e2e8f0;">
+                        ${item.visit_count || 1}
+                    </span>
+                </td>
+                <td style="font-size: 0.8rem; color: #cbd5e1; direction: ltr; text-align: right;" title="${item.visited_at}">
+                    ${formattedDate}
+                </td>
                 <td style="text-align: center;">${statusBadge}</td>
                 <td style="text-align: center;">${blockBtn}</td>
             </tr>
@@ -1811,13 +1905,35 @@ async function confirmClearBrowserHistory() {
     }
 }
 
+// Instant Block Button: Directly invokes API.createWebFilterRule to enforce immediate block
 async function quickBlockBrowserDomain(domain, title) {
     if (!STATE.activeDeviceId || !domain) return;
-    if (!confirm(`هل تريد حظر الموقع "${domain}" فوراً وإضافته إلى قائمة الحظر؟`)) return;
+    if (!confirm(`هل تريد حظر الموقع "${domain}" فوراً وتطبيق الحظر بلحظتها على أجهزة الطفل؟`)) return;
 
     try {
-        await API.quickBlockBrowserDomain(STATE.activeDeviceId, { domain, title });
-        UI.toast(`تم حظر ${domain} بنجاح ومزامنة الأمر مع الجهاز`, 'success');
+        // 1. Directly invoke API.createWebFilterRule as specified
+        await API.createWebFilterRule(STATE.activeDeviceId, {
+            rule_type: 'domain',
+            pattern: domain,
+            description: title ? `حظر فوري من سجل التصفح: ${title}` : `حظر فوري للنطاق: ${domain}`,
+            action: 'block',
+            category: 'custom'
+        });
+
+        // 2. Also register in browser history backend quick-block for immediate sync
+        try {
+            await API.quickBlockBrowserDomain(STATE.activeDeviceId, { domain, title });
+        } catch (_) {}
+
+        // 3. Dispatch WebSocket live update to the child agent device
+        if (window.WS && typeof window.WS.send === 'function') {
+            window.WS.send('WEB_FILTER_UPDATED', {
+                is_web_filter_enabled: true,
+                target_domain: domain
+            }, STATE.activeDeviceId);
+        }
+
+        UI.toast(`تم حظر الموقع "${domain}" وتطبيق الحظر بلحظتها بنجاح! 🚫`, 'success');
 
         // Update local item states
         browserHistoryState.items.forEach(i => {
@@ -1825,11 +1941,11 @@ async function quickBlockBrowserDomain(domain, title) {
         });
         renderBrowserHistoryUI();
 
-        // Also reload web filter if open
+        // Refresh web filter rules UI if present
         if (window.loadWebFilter) window.loadWebFilter(true);
     } catch (e) {
         console.error('Quick block error:', e);
-        UI.toast('فشل الحظر: ' + e.message, 'error');
+        UI.toast('فشل تطبيق الحظر: ' + e.message, 'error');
     }
 }
 

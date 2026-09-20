@@ -53,7 +53,7 @@ class AgentWebSocketClient(
         val app = KidsAgentApp.instance
         val deviceId = app.prefs.getString(KidsAgentApp.KEY_DEVICE_ID, null) ?: return
         val secret = app.prefs.getString(KidsAgentApp.KEY_PAIRING_SECRET, null) ?: return
-        var serverUrl = app.prefs.getString(KidsAgentApp.KEY_SERVER_URL, "ws://192.168.88.54:8080") ?: "ws://192.168.88.54:8080"
+        var serverUrl = app.prefs.getString(KidsAgentApp.KEY_SERVER_URL, "ws://192.168.1.106:8080") ?: "ws://192.168.1.106:8080"
 
         // Convert http(s) to ws(s) if user pasted http
         serverUrl = serverUrl.replace("http://", "ws://").replace("https://", "wss://")

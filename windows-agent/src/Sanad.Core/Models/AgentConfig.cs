@@ -5,8 +5,8 @@ namespace Sanad.Core.Models
 {
     public class AgentConfig
     {
-        public string ServerUrl { get; set; } = "http://192.168.88.54:8080";
-        public string WsUrl { get; set; } = "ws://192.168.88.54:8080/ws";
+        public string ServerUrl { get; set; } = "http://192.168.1.106:8080";
+        public string WsUrl { get; set; } = "ws://192.168.1.106:8080/ws";
         public string DeviceUid { get; set; } = string.Empty;
         public string DeviceName { get; set; } = Environment.MachineName;
         public string Model { get; set; } = "Windows PC";
