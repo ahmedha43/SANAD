@@ -47,4 +47,10 @@ class ApiConstants {
   static String toggleWebFilterRuleUrl(String deviceId, String ruleId) => '$baseUrl/api/v1/devices/$deviceId/web-filter/$ruleId/toggle';
   static String deleteWebFilterRuleUrl(String deviceId, String ruleId) => '$baseUrl/api/v1/devices/$deviceId/web-filter/$ruleId';
   static String seedWebFilterDefaultsUrl(String deviceId) => '$baseUrl/api/v1/devices/$deviceId/web-filter/seed-defaults';
+
+  // Browser History & Safe Search
+  static String browserHistoryUrl(String deviceId, {int limit = 100}) => '$baseUrl/api/v1/devices/$deviceId/browser-history?limit=$limit';
+  static String browserHistoryStatsUrl(String deviceId) => '$baseUrl/api/v1/devices/$deviceId/browser-history/stats';
+  static String clearBrowserHistoryUrl(String deviceId) => '$baseUrl/api/v1/devices/$deviceId/browser-history';
+  static String quickBlockBrowserDomainUrl(String deviceId) => '$baseUrl/api/v1/devices/$deviceId/browser-history/quick-block';
 }

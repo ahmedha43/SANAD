@@ -12,6 +12,7 @@ import '../data/files_screen.dart';
 import '../data/notifications_screen.dart';
 import '../data/sms_screen.dart';
 import '../filter/web_filter_screen.dart';
+import '../filter/browser_history_screen.dart';
 import '../location/geofence_manager_screen.dart';
 import '../location/live_map_screen.dart';
 import '../location/route_history_screen.dart';
@@ -1551,6 +1552,18 @@ class _DeviceControlScreenState extends State<DeviceControlScreen> {
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => WebFilterScreen(device: _device)),
+          ),
+        ),
+        _buildFeatureCard(
+          icon: Icons.history_edu_rounded,
+          title: 'سجل التصفح والبحث',
+          subtitle: 'Browser History & Search',
+          badge: 'رصد المتصفحات وحظر',
+          accentColor: const Color(0xFF06B6D4),
+          requiredFeature: 'app_blocking',
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => BrowserHistoryScreen(device: _device)),
           ),
         ),
       ],
