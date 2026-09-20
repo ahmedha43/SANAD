@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">SANAD Agent</string>
+    <string name="service_running_title">SANAD Protection Active</string>
+    <string name="service_running_desc">Device is connected to SANAD family safety</string>
+    <string name="accessibility_description">Enables real-time app limits and safety protections configured by SANAD.</string>
+    <string name="device_locked_title">Device Locked</string>
+    <string name="device_locked_desc">This device has been temporarily locked by SANAD family safety.</string>
+</resources>

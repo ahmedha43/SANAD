@@ -1,0 +1,58 @@
+﻿<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>سَنَد | الانتقال إلى منصة الرقابة الأبوية PHP 8</title>
+  <style>
+    body {
+      background: #0B0F19;
+      color: #F9FAFB;
+      font-family: system-ui, -apple-system, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      text-align: center;
+    }
+    .card {
+      background: #111827;
+      border: 1px solid #1F2937;
+      border-radius: 1rem;
+      padding: 2.5rem;
+      max-width: 480px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    }
+    h2 { color: #60A5FA; margin-bottom: 0.5rem; }
+    p { color: #9CA3AF; margin: 0.5rem 0; font-size: 0.95rem; }
+    a.btn {
+      display: inline-block;
+      margin-top: 1.5rem;
+      padding: 0.75rem 1.5rem;
+      background: #2563EB;
+      color: white;
+      text-decoration: none;
+      border-radius: 0.5rem;
+      font-weight: bold;
+      transition: background 0.2s;
+    }
+    a.btn:hover { background: #1D4ED8; }
+  </style>
+  <script>
+    const targetUrl = `${window.location.protocol}//${window.location.hostname}:8085`;
+    setTimeout(() => { window.location.href = targetUrl; }, 1500);
+  </script>
+</head>
+<body>
+  <div class="card">
+    <h2>منصة سَنَد للرقابة الأبوية</h2>
+    <p>تمت ترقية لوحة التحكم إلى نظام PHP 8 الحديث.</p>
+    <p>جاري تحويلك تلقائياً إلى المنصة...</p>
+    <a id="redirect-link" class="btn" href="#">الانتقال فوراً</a>
+    <script>
+      document.getElementById('redirect-link').href = targetUrl;
+    </script>
+  </div>
+</body>
+</html>

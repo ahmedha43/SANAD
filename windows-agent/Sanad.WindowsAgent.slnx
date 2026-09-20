@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Sanad.Core/Sanad.Core.csproj" />
+    <Project Path="src/Sanad.Service/Sanad.Service.csproj" />
+    <Project Path="src/Sanad.UI/Sanad.UI.csproj" />
+  </Folder>
+</Solution>

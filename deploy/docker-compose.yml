@@ -1,0 +1,139 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: pc_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: parental_control_db
+      POSTGRES_USER: pc_admin
+      POSTGRES_PASSWORD: pc_secret_db_password_2026
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres/01_init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - pc_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pc_admin -d parental_control_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: pc_redis
+    restart: unless-stopped
+    command: redis-server --requirepass pc_redis_secret_password_2026 --save 60 1 --loglevel warning
+    volumes:
+      - redisdata:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - pc_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "pc_redis_secret_password_2026", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  coturn:
+    image: coturn/coturn:latest
+    container_name: pc_coturn
+    restart: unless-stopped
+    volumes:
+      - ./coturn/turnserver.conf:/etc/coturn/turnserver.conf:ro
+    ports:
+      - "3478:3478/tcp"
+      - "3478:3478/udp"
+      - "49152-49200:49152-49200/udp"
+    networks:
+      - pc_network
+
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: pc_backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SERVER_PORT: "8080"
+      DB_HOST: "postgres"
+      DB_PORT: "5432"
+      DB_USER: "pc_admin"
+      DB_PASSWORD: "pc_secret_db_password_2026"
+      DB_NAME: "parental_control_db"
+      DB_SSLMODE: "disable"
+      REDIS_HOST: "redis"
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: "pc_redis_secret_password_2026"
+      JWT_SECRET: "018f45a0b9e87d6a5c4b3a2f1e0d9c8b7a654321fedcba0987654321abcdef01"
+      TURN_STUN_URL: "stun:192.168.88.54:3478"
+      TURN_URL: "turn:192.168.88.54:3478"
+      TURN_USERNAME: "parentalctl"
+      TURN_CREDENTIAL: "SecureTurnSecretPass2026"
+      FCM_SERVER_KEY: ""
+    volumes:
+      - ../backend/web:/app/web
+    ports:
+      - "8080:8080"
+    networks:
+      - pc_network
+
+
+  admin-panel:
+    build:
+      context: ../admin-panel
+      dockerfile: Dockerfile
+    container_name: pc_admin_panel
+    restart: unless-stopped
+    volumes:
+      - ../admin-panel:/app
+    environment:
+      API_BASE_URL: "/api/v1"
+      WS_BASE_URL: "/ws"
+    ports:
+      - "3080:3000"
+    networks:
+      - pc_network
+
+  php-dashboard:
+    image: php:8.2-apache
+    container_name: pc_php_dashboard
+    restart: unless-stopped
+    volumes:
+      - ../web-php:/var/www/html
+    ports:
+      - "8085:80"
+    networks:
+      - pc_network
+
+  nginx:
+    image: nginx:alpine
+    container_name: pc_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - backend
+      - admin-panel
+      - php-dashboard
+    networks:
+      - pc_network
+
+networks:
+  pc_network:
+    driver: bridge
+
+volumes:
+  pgdata:
+  redisdata:

@@ -1,0 +1,53 @@
+/**
+ * Admin Panel - Custom Stylesheet
+ * ثيم التصميم الداكن الفاخر للوحة الإدارة
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap');
+
+body {
+    font-family: 'Tajawal', sans-serif;
+    background-color: #0b0f19;
+    color: #f3f4f6;
+    overflow-x: hidden;
+}
+
+/* Glassmorphism Effect */
+.glass {
+    background: rgba(17, 24, 39, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #111827;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #1f2937;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #3b82f6;
+}
+
+/* Table Enhancements */
+table th {
+    white-space: nowrap;
+}
+
+table td {
+    vertical-align: middle;
+}
+
+/* Smooth transitions */
+button, a {
+    transition: all 0.2s ease-in-out;
+}

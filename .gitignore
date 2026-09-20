@@ -1,0 +1,56 @@
+# Git ignore rules for SANAD Parental Control Platform
+
+# OS & Temp Files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.tmp
+*.log
+screen_*.png
+*.bak
+
+# Environment & local credentials
+.env
+.env.local
+
+# Build output & compiled binaries
+bin/
+obj/
+*.exe
+dist/
+*.pdb
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+server_linux*
+main_linux*
+
+# Scratch & Debug files
+scratch/
+test_*.js
+
+# Flutter & Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+parent-app/build/
+ephemeral/
+
+# Android & Gradle
+.gradle/
+build/
+local.properties
+*.apk
+*.aab
+.idea/
+*.iml
+
+# Node / JS
+node_modules/
+npm-debug.log*
+
+# FastStream / Third-party
+faststream-subscription-manager/

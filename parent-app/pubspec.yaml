@@ -1,0 +1,38 @@
+name: parent_app
+description: "Parent App for parental control and child device supervision"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # Networking & Real-time
+  http: ^1.2.1
+  web_socket_channel: ^3.0.1
+  flutter_webrtc: ^1.6.2+hotfix.3
+
+  # State Management & Storage
+  shared_preferences: ^2.2.3
+  intl: ^0.20.2
+  cryptography: ^2.7.2
+
+  # UI & Visuals
+  google_fonts: ^6.2.1
+  fl_chart: ^0.68.0
+  qr_flutter: ^4.1.0
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
