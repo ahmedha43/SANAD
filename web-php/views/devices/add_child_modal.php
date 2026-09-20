@@ -27,7 +27,7 @@ declare(strict_types=1);
                 </div>
                 <div class="info-note">
                     <i class="fa-solid fa-circle-info"></i>
-                    <span>بعد إضافة اسم الطفل، سيتم توليد رمز اقتران سداسي (6 أرقام) ورمز QR لمسحه بهاتف الطفل.</span>
+                    <span>بعد إضافة اسم الطفل، سيتم توليد رمز اقتران سداسي (6 أرقام) ورمز QR لمسحه بجهاز الطفل.</span>
                 </div>
                 <button class="btn btn-primary btn-block" id="btnCreateChild" onclick="submitCreateChild()">
                     <span>إنشاء وتوليد كود الاقتران</span>
@@ -39,7 +39,7 @@ declare(strict_types=1);
             <div id="addChildStep2" style="display: none;">
                 <div class="pairing-container">
                     <div class="pairing-header-text">
-                        افتح تطبيق <b>Kids Agent</b> على هاتف الطفل وامسح الرمز أو أدخل الكود:
+                        افتح تطبيق <b>Kids Agent</b> على جهاز الطفل وامسح الرمز أو أدخل الكود:
                     </div>
 
                     <!-- 6-digit Pairing Code Display -->
@@ -70,7 +70,7 @@ declare(strict_types=1);
 
                     <div class="pairing-status-indicator" id="pairingWaitStatus">
                         <i class="fa-solid fa-spinner fa-spin"></i>
-                        <span>بانتظار مسح الكود من هاتف الطفل...</span>
+                        <span>بانتظار مسح الكود من جهاز الطفل...</span>
                     </div>
 
                     <button class="btn btn-outline btn-block" onclick="finishPairingWorkflow()">

@@ -376,7 +376,7 @@ class _RouteHistoryScreenState extends State<RouteHistoryScreen> {
                       const Text('لا توجد رحلات مسجلة في هذه الفترة',
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
-                      Text('سيتم تسجيل المسار تلقائياً مع تحرك الطفل بالهاتف',
+                      Text('سيتم تسجيل المسار تلقائياً مع تحرك الطفل بالجهاز',
                           style: TextStyle(color: Colors.grey.shade400)),
                     ],
                   ),

@@ -10,7 +10,7 @@ declare(strict_types=1);
             <i class="fa-solid fa-video" style="color: var(--accent-rose)"></i>
             <div>
                 <h3>البث المباشر الحي للكاميرا والصوت (WebRTC Live Stream)</h3>
-                <span class="sub-text">مشاهدة حية ومباشرة بكاميرا هاتف الطفل مع إمكانية التبديل بين الكاميرا الأمامية والخلفية</span>
+                <span class="sub-text">مشاهدة حية ومباشرة بكاميرا جهاز الطفل مع إمكانية التبديل بين الكاميرا الأمامية والخلفية</span>
             </div>
         </div>
         <div class="header-actions">
@@ -27,7 +27,7 @@ declare(strict_types=1);
             <div class="video-placeholder" id="videoPlaceholder">
                 <i class="fa-solid fa-video-slash placeholder-icon"></i>
                 <div class="placeholder-title">البث المباشر متوقف حالياً</div>
-                <div class="placeholder-desc">اضغط على زر "بدء البث المباشر" للاتصال الفوري بكاميرا هاتف الطفل عبر تقنية WebRTC المشفرة.</div>
+                <div class="placeholder-desc">اضغط على زر "بدء البث المباشر" للاتصال الفوري بكاميرا جهاز الطفل عبر تقنية WebRTC المشفرة.</div>
                 <button class="btn btn-primary" onclick="startLiveCameraStream()">
                     <i class="fa-solid fa-play"></i>
                     <span>بدء البث المباشر الآن</span>

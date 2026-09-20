@@ -1,7 +1,7 @@
 <?php
 /**
  * Instant Walkie-Talkie (Push-to-Talk) Component
- * اتصال صوتي لاسلكي فوري بمكبر صوت الهاتف مع تجاوز وضع الصامت
+ * اتصال صوتي لاسلكي فوري بمكبر صوت الجهاز مع تجاوز وضع الصامت
  */
 declare(strict_types=1);
 ?>
@@ -24,7 +24,7 @@ declare(strict_types=1);
         <i class="fa-solid fa-triangle-exclamation" style="color: var(--accent-amber); font-size: 1.5rem; flex-shrink: 0;"></i>
         <div style="font-size: 0.9rem; line-height: 1.5;">
             <strong style="color: var(--accent-amber);">تنبيه استثنائي:</strong>
-            عند الضغط للتحدث، سيتم تشغيل نغمة إنذار لاسلكية (Tactical Chirp) متبوعة بصوتك مباشرة عبر مكبر الصوت الخارجي للهاتف بأقصى مستوى، حتى لو كان هاتف الطفل في وضع الصامت التام أو "عدم الإزعاج".
+            عند الضغط للتحدث، سيتم تشغيل نغمة إنذار لاسلكية (Tactical Chirp) متبوعة بصوتك مباشرة عبر مكبر الصوت الخارجي للجهاز بأقصى مستوى، حتى لو كان جهاز الطفل في وضع الصامت التام أو "عدم الإزعاج".
         </div>
     </div>
 

@@ -10,7 +10,7 @@ declare(strict_types=1);
             <i class="fa-solid fa-bell" style="color: var(--accent-rose)"></i>
             <div>
                 <h3>إشعارات التطبيقات الملتقطة فورياً (Intercepted Notifications)</h3>
-                <span class="sub-text">سجل الرسائل والتنبيهات الواردة على هاتف الطفل من كافة التطبيقات فور وصولها</span>
+                <span class="sub-text">سجل الرسائل والتنبيهات الواردة على جهاز الطفل من كافة التطبيقات فور وصولها</span>
             </div>
         </div>
         <button class="btn btn-outline-sm" onclick="App.loadNotifications()">

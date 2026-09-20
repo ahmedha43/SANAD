@@ -10,7 +10,7 @@ declare(strict_types=1);
             <i class="fa-solid fa-hourglass-half" style="color: var(--accent-amber)"></i>
             <div>
                 <h3>قواعد وقت الشاشة وموعد النوم (Screen Time & Bedtime)</h3>
-                <span class="sub-text">تنظيم ساعات استخدام الهاتف اليومية وقفل الهاتف تلقائياً أثناء وقت النوم والدراسة</span>
+                <span class="sub-text">تنظيم ساعات استخدام الجهاز اليومية وقفل الجهاز تلقائياً أثناء وقت النوم والدراسة</span>
             </div>
         </div>
         <button class="btn btn-amber-sm" onclick="saveScreenTimeSettings()">

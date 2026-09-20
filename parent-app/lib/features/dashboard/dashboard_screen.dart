@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../core/constants/api_constants.dart';
@@ -137,7 +137,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 const Icon(Icons.battery_alert, color: Colors.orangeAccent),
                 const SizedBox(width: 8),
-                Text('⚠️ تنبيه: بطارية هاتف الطفل منخفضة ($level%)!'),
+                Text('⚠️ تنبيه: بطارية جهاز الطفل منخفضة ($level%)!'),
               ],
             ),
             backgroundColor: const Color(0xFF1E293B),
@@ -362,7 +362,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ],
             const SizedBox(height: 12),
             const Text(
-              'رصدت منظومة سَنَد محتوى عالي الخطورة على هاتف طفلك:',
+              'رصدت منظومة سَنَد محتوى عالي الخطورة على جهاز طفلك:',
               style: TextStyle(color: Colors.white, fontSize: 13),
             ),
             const SizedBox(height: 8),
@@ -676,7 +676,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'قم بإقران أول هاتف لطفلك الآن لبدء الحماية والتتبع الكامل',
+                              'قم بإقران أول جهاز لطفلك الآن لبدء الحماية والتتبع الكامل',
                               style: TextStyle(color: Colors.grey.shade400, fontSize: 13),
                               textAlign: TextAlign.center,
                             ),
@@ -684,7 +684,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ElevatedButton.icon(
                               onPressed: _openAddDeviceDialog,
                               icon: const Icon(Icons.add),
-                              label: const Text('إقران هاتف الطفل الآن'),
+                              label: const Text('إقران جهاز الطفل الآن'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF2563EB),
                                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -999,3 +999,4 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.dispose();
   }
 }
+

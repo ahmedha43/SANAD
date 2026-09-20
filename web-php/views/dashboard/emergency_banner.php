@@ -11,7 +11,7 @@ declare(strict_types=1);
         </div>
         <div class="banner-text">
             <div class="banner-title" id="riskBannerTitle">إنذار أمني ذكي طارئ!</div>
-            <div class="banner-desc" id="riskBannerDesc">اكتشف محرك الذكاء الاصطناعي محتوى عالي الخطورة على هاتف الطفل.</div>
+            <div class="banner-desc" id="riskBannerDesc">اكتشف محرك الذكاء الاصطناعي محتوى عالي الخطورة على جهاز الطفل.</div>
         </div>
     </div>
     <div class="banner-actions">

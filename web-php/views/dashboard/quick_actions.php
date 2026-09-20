@@ -22,7 +22,7 @@ declare(strict_types=1);
                     <span class="status-badge status-badge-active" id="masterMonitoringBadge">نشطة 🟢</span>
                 </div>
                 <p class="master-subtitle" id="masterMonitoringDesc">
-                    كافة أدوات حماية التطبيقات، وتصفية الويب، والتقاط التنبيهات، وتتبع الهاتف تعمل بشكل طبيعي ومحكم.
+                    كافة أدوات حماية التطبيقات، وتصفية الويب، والتقاط التنبيهات، وتتبع الجهاز تعمل بشكل طبيعي ومحكم.
                 </p>
             </div>
         </div>
@@ -82,7 +82,7 @@ declare(strict_types=1);
         <button class="action-btn btn-danger" onclick="sendCommand('LOCK_DEVICE')">
             <div class="btn-icon"><i class="fa-solid fa-lock"></i></div>
             <div class="btn-labels">
-                <span class="btn-primary-text">قفل الهاتف فوراً</span>
+                <span class="btn-primary-text">قفل الجهاز فوراً</span>
                 <span class="btn-secondary-text">Lock Device</span>
             </div>
         </button>
@@ -91,7 +91,7 @@ declare(strict_types=1);
         <button class="action-btn btn-emerald" onclick="sendCommand('UNLOCK_DEVICE')">
             <div class="btn-icon"><i class="fa-solid fa-lock-open"></i></div>
             <div class="btn-labels">
-                <span class="btn-primary-text">إلغاء قفل الهاتف</span>
+                <span class="btn-primary-text">إلغاء قفل الجهاز</span>
                 <span class="btn-secondary-text">Unlock Device</span>
             </div>
         </button>
@@ -136,7 +136,7 @@ declare(strict_types=1);
         <button class="action-btn btn-amber" id="btnBlockSettings" onclick="toggleBlockSettings()">
             <div class="btn-icon"><i class="fa-solid fa-sliders"></i></div>
             <div class="btn-labels">
-                <span class="btn-primary-text" id="blockSettingsBtnText">حظر إعدادات الهاتف</span>
+                <span class="btn-primary-text" id="blockSettingsBtnText">حظر إعدادات الجهاز</span>
                 <span class="btn-secondary-text">Block Android Settings</span>
             </div>
         </button>

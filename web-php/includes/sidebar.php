@@ -47,7 +47,7 @@ declare(strict_types=1);
             <span>المناطق الجغرافية الآمنة</span>
         </a>
 
-        <div class="sidebar-category">إدارة الهاتف والتطبيقات</div>
+        <div class="sidebar-category">إدارة الجهاز والتطبيقات</div>
 
         <a href="#apps" class="nav-item" onclick="switchSection('apps', this)">
             <i class="fa-solid fa-cubes"></i>

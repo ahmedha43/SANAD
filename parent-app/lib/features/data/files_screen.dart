@@ -78,7 +78,7 @@ class _FilesScreenState extends State<FilesScreen> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('تم طلب مزامنة أحدث الصور والملفات من هاتف الطفل...'),
+          content: Text('تم طلب مزامنة أحدث الصور والملفات من جهاز الطفل...'),
           backgroundColor: Colors.blue,
         ),
       );
@@ -163,7 +163,7 @@ class _FilesScreenState extends State<FilesScreen> {
                           children: [
                             CircularProgressIndicator(),
                             SizedBox(height: 16),
-                            Text('جاري تحميل الصورة عالية الدقة من هاتف الطفل...',
+                            Text('جاري تحميل الصورة عالية الدقة من جهاز الطفل...',
                                 style: TextStyle(color: Colors.white70)),
                           ],
                         ),
@@ -243,7 +243,7 @@ class _FilesScreenState extends State<FilesScreen> {
                       const Text('لا توجد ملفات أو صور مسجلة بعد',
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
-                      Text('انقر فوق زر التحديث لجلب أحدث الصور والملفات من هاتف الطفل',
+                      Text('انقر فوق زر التحديث لجلب أحدث الصور والملفات من جهاز الطفل',
                           style: TextStyle(color: Colors.grey.shade400)),
                       const SizedBox(height: 16),
                       ElevatedButton.icon(

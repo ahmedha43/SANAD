@@ -150,7 +150,7 @@ const ScreenStreamController = {
             badge.className = 'stream-badge-status connecting';
         }
         const note = document.getElementById('screenStreamNote');
-        if (note) note.textContent = 'جاري طلب الاتصال بشاشة هاتف الطفل...';
+        if (note) note.textContent = 'جاري طلب الاتصال بشاشة جهاز الطفل...';
 
         try {
             const config = await API.getWebRTCConfig();

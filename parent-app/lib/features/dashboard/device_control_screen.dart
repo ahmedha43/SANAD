@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../core/constants/api_constants.dart';
@@ -139,7 +139,7 @@ class _DeviceControlScreenState extends State<DeviceControlScreen> {
         final lvl = msg['payload']?['battery_level'] ?? 15;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('⚠️ تنبيه: بطارية هاتف الطفل منخفضة ($lvl%)!'),
+            content: Text('⚠️ تنبيه: بطارية جهاز الطفل منخفضة ($lvl%)!'),
             backgroundColor: const Color(0xFF1E293B),
           ),
         );
@@ -309,9 +309,9 @@ class _DeviceControlScreenState extends State<DeviceControlScreen> {
                   SizedBox(height: 6),
                   Text('• فك قفل الشاشة وإلغاء حظر كافة التطبيقات والمواقع.', style: TextStyle(color: Colors.white70, fontSize: 12)),
                   SizedBox(height: 4),
-                  Text('• إزالة قيود Device Owner وتمكين حذف الأيجنت من الهاتف.', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                  Text('• إزالة قيود Device Owner وتمكين حذف الأيجنت من الجهاز.', style: TextStyle(color: Colors.white70, fontSize: 12)),
                   SizedBox(height: 4),
-                  Text('• تصفير قاعدة بيانات الهاتف المحلية وإلغاء مفاتيح الاقتران.', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                  Text('• تصفير قاعدة بيانات الجهاز المحلية وإلغاء مفاتيح الاقتران.', style: TextStyle(color: Colors.white70, fontSize: 12)),
                   SizedBox(height: 4),
                   Text('• حذف كافة سجلات التصفح والموقع والمكالمات والصور من السحابة.', style: TextStyle(color: Colors.white70, fontSize: 12)),
                 ],
@@ -457,7 +457,7 @@ class _DeviceControlScreenState extends State<DeviceControlScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(next ? '⚙️ تم حظر فتح إعدادات الهاتف للطفل' : '⚙️ تم السماح بفتح إعدادات الهاتف'),
+            content: Text(next ? '⚙️ تم حظر فتح إعدادات الجهاز للطفل' : '⚙️ تم السماح بفتح إعدادات الجهاز'),
             backgroundColor: next ? Colors.amber.shade900 : Colors.blueGrey.shade800,
           ),
         );
@@ -480,7 +480,7 @@ class _DeviceControlScreenState extends State<DeviceControlScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('انتهت مهلة انتظار لقطة الشاشة. تأكد من اتصال هاتف الطفل وتشغيل الشاشة.'),
+            content: const Text('انتهت مهلة انتظار لقطة الشاشة. تأكد من اتصال جهاز الطفل وتشغيل الشاشة.'),
             backgroundColor: Colors.red.shade900,
           ),
         );
@@ -498,7 +498,7 @@ class _DeviceControlScreenState extends State<DeviceControlScreen> {
             ),
             SizedBox(width: 12),
             Expanded(
-              child: Text('جاري التقاط لقطة شاشة صامتة فورية من هاتف الطفل...'),
+              child: Text('جاري التقاط لقطة شاشة صامتة فورية من جهاز الطفل...'),
             ),
           ],
         ),
@@ -690,7 +690,7 @@ class _DeviceControlScreenState extends State<DeviceControlScreen> {
             ],
             const SizedBox(height: 12),
             const Text(
-              'رصدت منظومة سَنَد محتوى عالي الخطورة على هاتف طفلك:',
+              'رصدت منظومة سَنَد محتوى عالي الخطورة على جهاز طفلك:',
               style: TextStyle(color: Colors.white, fontSize: 13),
             ),
             const SizedBox(height: 8),
@@ -1098,7 +1098,7 @@ class _DeviceControlScreenState extends State<DeviceControlScreen> {
               const SizedBox(height: 20),
             ],
             if (_selectedCategory == 'all' || _selectedCategory == 'logs') ...[
-              _buildSectionHeader('سجلات الهاتف والبيانات', Icons.folder_shared, Colors.tealAccent),
+              _buildSectionHeader('سجلات الجهاز والبيانات', Icons.folder_shared, Colors.tealAccent),
               const SizedBox(height: 10),
               _buildLogsGrid(),
               const SizedBox(height: 24),
@@ -1585,15 +1585,15 @@ class _DeviceControlScreenState extends State<DeviceControlScreen> {
       children: [
         _buildFeatureCard(
           icon: Icons.lock,
-          title: 'قفل الهاتف فوراً',
+          title: 'قفل الجهاز فوراً',
           subtitle: 'Lock Device',
           badge: 'إغلاق كامل',
           accentColor: const Color(0xFFEF4444),
-          onTap: () => _sendCommand('LOCK_DEVICE', 'تم إرسال أمر قفل الهاتف بنجاح!'),
+          onTap: () => _sendCommand('LOCK_DEVICE', 'تم إرسال أمر قفل الجهاز بنجاح!'),
         ),
         _buildFeatureCard(
           icon: Icons.lock_open,
-          title: 'إلغاء قفل الهاتف',
+          title: 'إلغاء قفل الجهاز',
           subtitle: 'Unlock Device',
           badge: 'استعادة الشاشة',
           accentColor: const Color(0xFF10B981),
@@ -1605,7 +1605,7 @@ class _DeviceControlScreenState extends State<DeviceControlScreen> {
           subtitle: 'Play Siren Alarm',
           badge: 'أقصى صوت',
           accentColor: const Color(0xFFF97316),
-          onTap: () => _sendCommand('PLAY_ALARM', 'تم إطلاق صفارة الإنذار في هاتف الطفل!'),
+          onTap: () => _sendCommand('PLAY_ALARM', 'تم إطلاق صفارة الإنذار في جهاز الطفل!'),
         ),
         _buildFeatureCard(
           icon: Icons.volume_off,
@@ -2014,3 +2014,4 @@ class _DeviceControlScreenState extends State<DeviceControlScreen> {
     super.dispose();
   }
 }
+

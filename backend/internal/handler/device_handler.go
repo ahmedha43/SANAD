@@ -254,7 +254,7 @@ func (h *DeviceHandler) SendCommand(c *fiber.Ctx) error {
 			return err
 		}
 	} else if req.Action == "SET_BLOCK_SETTINGS" {
-		if err := checkFeature("settings_protection", "حظر الوصول إلى إعدادات الهاتف"); err != nil {
+		if err := checkFeature("settings_protection", "حظر الوصول إلى إعدادات الجهاز"); err != nil {
 			return err
 		}
 	}

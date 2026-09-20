@@ -53,7 +53,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
         'params': {},
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم طلب تحديث جهات الاتصال من هاتف الطفل...'), backgroundColor: Colors.blue),
+        const SnackBar(content: Text('تم طلب تحديث جهات الاتصال من جهاز الطفل...'), backgroundColor: Colors.blue),
       );
       await Future.delayed(const Duration(seconds: 2));
       _fetchContacts();

@@ -69,7 +69,7 @@ class _CallsScreenState extends State<CallsScreen> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('تم طلب مزامنة سجل المكالمات من هاتف الطفل...'),
+          content: Text('تم طلب مزامنة سجل المكالمات من جهاز الطفل...'),
           backgroundColor: Colors.blue,
         ),
       );
@@ -127,7 +127,7 @@ class _CallsScreenState extends State<CallsScreen> {
                       const SizedBox(height: 16),
                       const Text('لا توجد مكالمات مسجلة', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
-                      Text('انقر فوق زر التحديث لجلب السجل من هاتف الطفل', style: TextStyle(color: Colors.grey.shade400)),
+                      Text('انقر فوق زر التحديث لجلب السجل من جهاز الطفل', style: TextStyle(color: Colors.grey.shade400)),
                       const SizedBox(height: 16),
                       ElevatedButton.icon(
                         onPressed: _requestRefreshFromDevice,

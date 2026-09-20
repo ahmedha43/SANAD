@@ -15,7 +15,7 @@ declare(strict_types=1);
         </div>
         <div class="modal-body">
             <p class="e2ee-explainer-text">
-                باستخدام معيار <strong>Zero-Knowledge E2EE</strong>، يتم تشفير كافة المحادثات، المكالمات، ولقطات الشاشة محلياً على هاتف الطفل باستخدام مفتاح العائلة السري عبر خوارزمية <code>AES-256-GCM</code>. الخادم لا يمكنه قراءة أي محتوى إطلاقاً.
+                باستخدام معيار <strong>Zero-Knowledge E2EE</strong>، يتم تشفير كافة المحادثات، المكالمات، ولقطات الشاشة محلياً على جهاز الطفل باستخدام مفتاح العائلة السري عبر خوارزمية <code>AES-256-GCM</code>. الخادم لا يمكنه قراءة أي محتوى إطلاقاً.
             </p>
 
             <div class="form-group" style="margin-top: 15px;">

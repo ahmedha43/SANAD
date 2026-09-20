@@ -165,7 +165,7 @@ class _DeviceOwnerScreenState extends State<DeviceOwnerScreen> {
           const SizedBox(height: 10),
           Text(
             _isDeviceOwner
-                ? 'الهاتف محمي بأقصى صلاحيات Android Enterprise للمؤسسات. لا يمكن للطفل إلغاء التثبيت أو عمل ضبط مصنع.'
+                ? 'الجهاز محمي بأقصى صلاحيات Android Enterprise للمؤسسات. لا يمكن للطفل إلغاء التثبيت أو عمل ضبط مصنع.'
                 : 'التطبيق يعمل بالوضع القياسي (مسؤول جهاز: ${_isDeviceAdmin ? "مفعل" : "غير مفعل"}). يمكنك تفعيله كـ Device Owner لمنع الحذف وإعادة ضبط المصنع نهائياً.',
             style: TextStyle(color: Colors.grey.shade400, fontSize: 13, height: 1.4),
           ),
@@ -248,7 +248,7 @@ class _DeviceOwnerScreenState extends State<DeviceOwnerScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'صل هاتف الطفل بالكمبيوتر ونفذ الأمر التالي عبر سطر الأوامر:',
+            'صل جهاز الطفل بالكمبيوتر ونفذ الأمر التالي عبر سطر الأوامر:',
             style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
           ),
           const SizedBox(height: 10),
@@ -310,7 +310,7 @@ class _DeviceOwnerScreenState extends State<DeviceOwnerScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'عند تشغيل الهاتف الجديد أو المفرمت، انقر 6 مرات متتالية على شاشة الترحيب البيضاء لمسح الرمز أدناه:',
+            'عند تشغيل الجهاز الجديد أو المفرمت، انقر 6 مرات متتالية على شاشة الترحيب البيضاء لمسح الرمز أدناه:',
             style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
             textAlign: TextAlign.start,
           ),

@@ -80,7 +80,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('إشعارات هاتف - $childName'),
+        title: Text('إشعارات جهاز - $childName'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -100,7 +100,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       const Text('لا توجد إشعارات مسجلة بعد', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
                       Text(
-                        'عندما يتلقى هاتف الطفل إشعارات من تطبيقات مثل واتساب وتيليجرام وغيرها، ستظهر هنا فوراً',
+                        'عندما يتلقى جهاز الطفل إشعارات من تطبيقات مثل واتساب وتيليجرام وغيرها، ستظهر هنا فوراً',
                         textAlign: TextAlign.center,
                         style: TextStyle(color: Colors.grey.shade400, fontSize: 13),
                       ),

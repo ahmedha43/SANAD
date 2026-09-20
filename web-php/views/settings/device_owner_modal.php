@@ -18,7 +18,7 @@ declare(strict_types=1);
             
             <!-- Explainer -->
             <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 1.25rem;">
-                تفعيل التطبيق كـ <strong>مالك الجهاز (Device Owner)</strong> عبر نظام <strong>Android Enterprise</strong> يمنح التطبيق الحصانة المطلقة ضد أي محاولة تلاعب من قبل الطفل؛ حيث يستحيل عليه مسح التطبيق أو إيقاف الصلاحيات أو عمل فورمات للهاتف.
+                تفعيل التطبيق كـ <strong>مالك الجهاز (Device Owner)</strong> عبر نظام <strong>Android Enterprise</strong> يمنح التطبيق الحصانة المطلقة ضد أي محاولة تلاعب من قبل الطفل؛ حيث يستحيل عليه مسح التطبيق أو إيقاف الصلاحيات أو عمل فورمات للجهاز.
             </p>
 
             <!-- Protections Table -->
@@ -69,7 +69,7 @@ declare(strict_types=1);
                     <span style="font-size: 0.75rem; color: #10b981; background: rgba(16,185,129,0.15); padding: 2px 8px; border-radius: 4px;">موصى به</span>
                 </h4>
                 <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
-                    صل هاتف الطفل بالكمبيوتر عبر كابل USB مع تفعيل تصحيح USB (USB Debugging)، ثم نفذ الأمر التالي:
+                    صل جهاز الطفل بالكمبيوتر عبر كابل USB مع تفعيل تصحيح USB (USB Debugging)، ثم نفذ الأمر التالي:
                 </p>
                 <div style="background: #000; border: 1px solid var(--border-light); border-radius: var(--radius-sm); padding: 0.75rem 1rem; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; direction: ltr; font-family: monospace;">
                     <code id="adbCommandText" style="color: #38bdf8; font-size: 0.85rem; word-break: break-all;">adb shell dpm set-device-owner com.parentalcontrol.kidsagent/.service.AgentDeviceAdminReceiver</code>
@@ -79,7 +79,7 @@ declare(strict_types=1);
                     </button>
                 </div>
                 <div style="font-size: 0.8rem; color: var(--accent-amber); margin-top: 0.6rem; line-height: 1.4;">
-                    <i class="fa-solid fa-circle-info"></i> ملاحظة أندرويد: إذا ظهر خطأ <code>already some accounts on the device</code>، توجه إلى إعدادات الهاتف > الحسابات، وقم بإزالة حسابات Google مؤقتاً، ونفذ الأمر، ثم أعد إضافة الحسابات.
+                    <i class="fa-solid fa-circle-info"></i> ملاحظة أندرويد: إذا ظهر خطأ <code>already some accounts on the device</code>، توجه إلى إعدادات الجهاز > الحسابات، وقم بإزالة حسابات Google مؤقتاً، ونفذ الأمر، ثم أعد إضافة الحسابات.
                 </div>
             </div>
 
@@ -89,7 +89,7 @@ declare(strict_types=1);
                     <i class="fa-solid fa-qrcode" style="margin-left: 6px;"></i> الطريقة الثانية: رمز QR للتهيئة المباشرة بعد الفورمات
                 </h4>
                 <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
-                    عند تشغيل الهاتف لأول مرة أو بعد ضبط المصنع، اضغط <strong>6 مرات متتالية</strong> على شاشة الترحيب البيضاء (Welcome Screen) لتشغيل كاميرا الـ QR، ثم امسح الرمز أدناه لتثبيت التطبيق تلقائياً كـ Device Owner:
+                    عند تشغيل الجهاز لأول مرة أو بعد ضبط المصنع، اضغط <strong>6 مرات متتالية</strong> على شاشة الترحيب البيضاء (Welcome Screen) لتشغيل كاميرا الـ QR، ثم امسح الرمز أدناه لتثبيت التطبيق تلقائياً كـ Device Owner:
                 </p>
                 <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem; background: #fff; padding: 1rem; border-radius: var(--radius-md); width: 200px; margin: 0 auto;">
                     <div id="deviceOwnerQrCanvas"></div>

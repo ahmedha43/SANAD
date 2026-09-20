@@ -49,7 +49,7 @@ class _SmsScreenState extends State<SmsScreen> {
         'params': {},
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم طلب مزامنة الرسائل من هاتف الطفل...'), backgroundColor: Colors.blue),
+        const SnackBar(content: Text('تم طلب مزامنة الرسائل من جهاز الطفل...'), backgroundColor: Colors.blue),
       );
       await Future.delayed(const Duration(seconds: 2));
       _fetchSms();
@@ -95,7 +95,7 @@ class _SmsScreenState extends State<SmsScreen> {
                       const SizedBox(height: 16),
                       const Text('لا توجد رسائل SMS مسجلة', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
-                      Text('انقر فوق زر التحديث لجلب الرسائل من هاتف الطفل', style: TextStyle(color: Colors.grey.shade400)),
+                      Text('انقر فوق زر التحديث لجلب الرسائل من جهاز الطفل', style: TextStyle(color: Colors.grey.shade400)),
                       const SizedBox(height: 16),
                       ElevatedButton.icon(
                         onPressed: _requestRefreshFromDevice,

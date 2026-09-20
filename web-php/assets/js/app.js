@@ -195,7 +195,7 @@ const App = {
         const child = STATE.children.find(c => c.id === STATE.activeChildId);
         const dev = STATE.devices.find(d => d.id === STATE.activeDeviceId);
 
-        const childName = child ? child.name : 'هاتف الطفل';
+        const childName = child ? child.name : 'جهاز الطفل';
         const modelName = dev ? dev.model : 'Android Device';
 
         document.getElementById('sideChildName').textContent = childName;
@@ -653,7 +653,7 @@ const App = {
     },
 
     formatRiskSource(src) {
-        if (!src) return '<span class="risk-source-tag"><i class="fa-solid fa-mobile"></i> هاتف الطفل</span>';
+        if (!src) return '<span class="risk-source-tag"><i class="fa-solid fa-mobile"></i> جهاز الطفل</span>';
         let icon = 'fa-mobile';
         if (src.includes('SMS')) icon = 'fa-comment-sms';
         else if (src.includes('NOTIFICATION') || src.includes('إشعار')) icon = 'fa-bell';
@@ -711,7 +711,7 @@ const App = {
                 <div class="text-center text-muted" style="padding: 50px 20px;">
                     <i class="fa-solid fa-shield-check" style="font-size: 2.5rem; color: var(--accent-emerald); margin-bottom: 12px; display: block;"></i>
                     <div style="font-size: 1.05rem; font-weight: 600; margin-bottom: 6px;">
-                        ${allAlerts.length === 0 ? 'البيئة آمنة تماماً - لم يتم رصد أي مخاطر على هاتف الطفل' : 'لا توجد تنبيهات تطابق الفلتر أو البحث المختار'}
+                        ${allAlerts.length === 0 ? 'البيئة آمنة تماماً - لم يتم رصد أي مخاطر على جهاز الطفل' : 'لا توجد تنبيهات تطابق الفلتر أو البحث المختار'}
                     </div>
                     <div style="font-size: 0.85rem;">
                         ${allAlerts.length === 0 ? 'يقوم محرك الذكاء الاصطناعي بفحص الرسائل والتنبيهات وسيرسل إشعاراً فور رصد أي خطر.' : 'جرب تغيير شروط الفلترة أو مسح حقل البحث.'}
@@ -1018,14 +1018,14 @@ const App = {
         UI.showToast(`🚨 تنبيه أمني عالي الخطورة: ${payload.category || 'تهديد مرصود'}`, 'error', 8000);
         const banner = document.getElementById('riskBanner');
         if (banner) {
-            document.getElementById('riskBannerDesc').textContent = payload.matched_reason || payload.reason || payload.snippet || 'اكتشف الذكاء الاصطناعي محتوى خطر على هاتف الطفل!';
+            document.getElementById('riskBannerDesc').textContent = payload.matched_reason || payload.reason || payload.snippet || 'اكتشف الذكاء الاصطناعي محتوى خطر على جهاز الطفل!';
             banner.style.display = 'flex';
         }
         this.loadRiskAlerts();
     },
 
     onSosAlert(payload) {
-        alert(`🚨 إنذار استغاثة طارئ (SOS) تم إطلاقه من هاتف الطفل!`);
+        alert(`🚨 إنذار استغاثة طارئ (SOS) تم إطلاقه من جهاز الطفل!`);
         this.loadLatestLocation();
     },
 
@@ -1055,7 +1055,7 @@ async function sendCommand(action, params = {}) {
     }
     try {
         await API.sendCommand(STATE.activeDeviceId, action, params);
-        UI.showToast(`تم إرسال الأمر (${action}) بنجاح للهاتف`, 'success');
+        UI.showToast(`تم إرسال الأمر (${action}) بنجاح للجهاز`, 'success');
     } catch (e) {
         UI.showToast(`فشل إرسال الأمر: ${e.message}`, 'error');
     }
@@ -1094,14 +1094,14 @@ function requestScreenshot() {
         clearTimeout(window._screenshotWatchdog);
     }
     window._screenshotWatchdog = setTimeout(() => {
-        UI.displayScreenshotError('انتهت مهلة الانتظار (15 ثانية) دون استجابة من هاتف الطفل. يرجى التأكد من تشغيل الشاشة واتصال الهاتف بالشبكة.');
+        UI.displayScreenshotError('انتهت مهلة الانتظار (15 ثانية) دون استجابة من جهاز الطفل. يرجى التأكد من تشغيل الشاشة واتصال الجهاز بالشبكة.');
     }, 15000);
 }
 
 function refreshActiveDeviceData() { App.loadAllActiveDeviceData(); }
 function requestCallsSync() {
     sendCommand('FETCH_CALLS');
-    UI.showToast('جاري طلب مزامنة سجل المكالمات من هاتف الطفل...', 'info');
+    UI.showToast('جاري طلب مزامنة سجل المكالمات من جهاز الطفل...', 'info');
     setTimeout(() => {
         if (window.App && window.App.loadCalls) window.App.loadCalls();
     }, 1500);
@@ -1113,7 +1113,7 @@ function requestFullSync() {
     requestSmsSync();
     requestContactsSync();
     requestFilesSync();
-    UI.showToast('تم طلب مزامنة كافة بيانات هاتف الطفل', 'info');
+    UI.showToast('تم طلب مزامنة كافة بيانات جهاز الطفل', 'info');
 }
 
 // === Master Monitoring Switch ===
@@ -1150,7 +1150,7 @@ function updateMasterMonitoringUI(isPaused) {
         titleText.textContent = 'درع حماية سَنَد نشط بالكامل';
         badge.textContent = 'نشطة 🟢';
         badge.className = 'status-badge status-badge-active';
-        desc.textContent = 'كافة أدوات حظر التطبيقات، وتصفية الويب، والتقاط التنبيهات، وتتبع الهاتف تعمل بشكل طبيعي ومحكم.';
+        desc.textContent = 'كافة أدوات حظر التطبيقات، وتصفية الويب، والتقاط التنبيهات، وتتبع الجهاز تعمل بشكل طبيعي ومحكم.';
         btn.className = 'btn-master-toggle btn-master-pause';
         if (btnIcon) btnIcon.className = 'fa-solid fa-pause';
         if (btnText) btnText.textContent = 'تعليق الحماية مؤقتاً';
@@ -1180,7 +1180,7 @@ async function toggleMasterMonitoring() {
         await sendCommand(action);
         const dev = STATE.devices.find(d => d.id === STATE.activeDeviceId);
         if (dev) dev.is_monitoring_paused = nextState;
-        UI.showToast(nextState ? '⏸️ تم تعليق درع الحماية مؤقتاً على الهاتف' : '🟢 تم استئناف درع الحماية بالكامل على الهاتف', 'success');
+        UI.showToast(nextState ? '⏸️ تم تعليق درع الحماية مؤقتاً على الجهاز' : '🟢 تم استئناف درع الحماية بالكامل على الجهاز', 'success');
     } catch (e) {
         updateMasterMonitoringUI(!nextState);
         UI.showToast(`فشل تغيير حالة الحماية: ${e.message}`, 'error');
@@ -1246,7 +1246,7 @@ async function toggleStealthMode() {
             btn.classList.add('btn-secondary');
         }
     }
-    UI.showToast(isStealthModeActive ? 'تم إخفاء أيقونة التطبيق. يمكن فتح التطبيق عبر طلب *#*#2026#*#*' : 'تم إظهار أيقونة التطبيق في هاتف الطفل', 'success');
+    UI.showToast(isStealthModeActive ? 'تم إخفاء أيقونة التطبيق. يمكن فتح التطبيق عبر طلب *#*#2026#*#*' : 'تم إظهار أيقونة التطبيق في جهاز الطفل', 'success');
 }
 
 async function toggleBlockSettings() {
@@ -1265,16 +1265,16 @@ async function toggleBlockSettings() {
     const btn = document.getElementById('btnBlockSettings');
     if (btnText && btn) {
         if (isBlockSettingsActive) {
-            btnText.textContent = 'حظر إعدادات الهاتف (مفعّل)';
+            btnText.textContent = 'حظر إعدادات الجهاز (مفعّل)';
             btn.classList.add('btn-danger');
             btn.classList.remove('btn-amber');
         } else {
-            btnText.textContent = 'حظر إعدادات الهاتف (معطل)';
+            btnText.textContent = 'حظر إعدادات الجهاز (معطل)';
             btn.classList.remove('btn-danger');
             btn.classList.add('btn-amber');
         }
     }
-    UI.showToast(isBlockSettingsActive ? 'تم حظر فتح إعدادات الهاتف على الطفل' : 'تم السماح بفتح إعدادات الهاتف', isBlockSettingsActive ? 'warning' : 'info');
+    UI.showToast(isBlockSettingsActive ? 'تم حظر فتح إعدادات الجهاز على الطفل' : 'تم السماح بفتح إعدادات الجهاز', isBlockSettingsActive ? 'warning' : 'info');
 }
 
 // === Web Filter & Safe Browsing Management ===
@@ -2447,7 +2447,7 @@ async function saveScreenTimeSettings() {
             bedtime_end: bedEnd,
             is_enabled: enabled
         });
-        UI.showToast('تم حفظ وتطبيق قواعد وقت الشاشة على هاتف الطفل', 'success');
+        UI.showToast('تم حفظ وتطبيق قواعد وقت الشاشة على جهاز الطفل', 'success');
     } catch (e) {
         UI.showToast('فشل حفظ القواعد: ' + e.message, 'error');
     }

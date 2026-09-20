@@ -434,12 +434,12 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
         ),
         const SizedBox(height: 24),
         const Text(
-          'الاستماع المباشر لمحيط الهاتف',
+          'الاستماع المباشر لمحيط الجهاز',
           style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         Text(
-          'بث صوتي مشفر خفيف جداً (~30 kbps) من هاتف ${widget.device['device_name']}',
+          'بث صوتي مشفر خفيف جداً (~30 kbps) من جهاز ${widget.device['device_name']}',
           style: const TextStyle(color: Colors.white60, fontSize: 13),
         ),
       ],
@@ -464,7 +464,7 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
               SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  '⚠️ مكبر الصوت في هاتف الطفل سيعمل بأقصى درجة متجاوزاً وضع الصامت.',
+                  '⚠️ مكبر الصوت في جهاز الطفل سيعمل بأقصى درجة متجاوزاً وضع الصامت.',
                   style: TextStyle(color: Colors.white, fontSize: 12),
                 ),
               ),

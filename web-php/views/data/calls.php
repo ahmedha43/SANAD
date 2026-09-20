@@ -9,7 +9,7 @@ declare(strict_types=1);
         <div class="panel-title-group">
             <i class="fa-solid fa-phone-volume" style="color: var(--accent-emerald)"></i>
             <div>
-                <h3>سجل المكالمات الهاتفية (Phone Calls Log)</h3>
+                <h3>سجل المكالمات (Calls Log)</h3>
                 <span class="sub-text">سجل المكالمات الصادرة والواردة والفائتة مع تفاصيل المدة والتوقيت الدقيق</span>
             </div>
         </div>

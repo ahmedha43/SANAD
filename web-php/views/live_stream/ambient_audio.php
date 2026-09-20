@@ -1,7 +1,7 @@
 <?php
 /**
  * WebRTC Remote Ambient Audio Listener Component
- * استماع حي وفوري للصوت المحيط بهاتف الطفل (ميكروفون فقط دون كاميرا أو شاشة)
+ * استماع حي وفوري للصوت المحيط بجهاز الطفل (ميكروفون فقط دون كاميرا أو شاشة)
  */
 declare(strict_types=1);
 ?>
@@ -11,7 +11,7 @@ declare(strict_types=1);
             <i class="fa-solid fa-microphone-lines" style="color: var(--accent-emerald); font-size: 1.5rem;"></i>
             <div>
                 <h3>الاستماع الصوتي الحي للمحيط (Ambient Audio Listener)</h3>
-                <span class="sub-text">استماع فوري لمحيط هاتف الطفل عبر الميكروفون فقط بأقل استهلاك للبطارية والبيانات (~90% توفير)</span>
+                <span class="sub-text">استماع فوري لمحيط جهاز الطفل عبر الميكروفون فقط بأقل استهلاك للبطارية والبيانات (~90% توفير)</span>
             </div>
         </div>
         <div class="header-actions">

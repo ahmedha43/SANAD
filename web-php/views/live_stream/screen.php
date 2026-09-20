@@ -11,7 +11,7 @@ declare(strict_types=1);
             <i class="fa-solid fa-desktop" style="color: #6366f1"></i>
             <div>
                 <h3>عرض وبث شاشة الطفل المباشر (Live Screen)</h3>
-                <span class="sub-text">مشاهدة حية ومباشرة لكل ما يفعله الطفل على هاتفه لحظة بلحظة مع الصوت أو عبر لقطات دورية مستمرة</span>
+                <span class="sub-text">مشاهدة حية ومباشرة لكل ما يفعله الطفل على جهازه لحظة بلحظة مع الصوت أو عبر لقطات دورية مستمرة</span>
             </div>
         </div>
         <div class="header-actions" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
@@ -60,7 +60,7 @@ declare(strict_types=1);
                         <span>بدء بث الشاشة المباشر الآن</span>
                     </button>
                     <div id="screenStreamNote" style="font-size: 0.75rem; color: #94a3b8; margin-top: 8px;">
-                        💡 ملاحظة: عند البث لأول مرة قد تظهر رسالة تأكيد عادية على هاتف الطفل للموافقة على مشاركة الشاشة.
+                        💡 ملاحظة: عند البث لأول مرة قد تظهر رسالة تأكيد عادية على جهاز الطفل للموافقة على مشاركة الشاشة.
                     </div>
                 </div>
 
@@ -136,7 +136,7 @@ declare(strict_types=1);
                 <!-- Spinner during initial capture -->
                 <div id="silentSurveillanceSpinner" style="display: none; position: absolute; z-index: 15; text-align: center; background: rgba(0,0,0,0.7); padding: 20px; border-radius: 16px;">
                     <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 2rem; color: #10b981;"></i>
-                    <div style="color: #fff; font-size: 0.85rem; margin-top: 10px;">جاري جلب لقطة الشاشة من الهاتف...</div>
+                    <div style="color: #fff; font-size: 0.85rem; margin-top: 10px;">جاري جلب لقطة الشاشة من الجهاز...</div>
                 </div>
 
                 <!-- Placeholder when no snapshot yet -->
@@ -146,7 +146,7 @@ declare(strict_types=1);
                     </div>
                     <div style="font-size: 1.15rem; font-weight: 700; color: #fff;">الاطمئنان الدوري باللقطات</div>
                     <div style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; max-width: 280px;">
-                        تتيح لك التقاط صور مستمرة وفورية لشاشة الهاتف دون استهلاك كبير للإنترنت وبشكل صامت تماماً.
+                        تتيح لك التقاط صور مستمرة وفورية لشاشة الجهاز دون استهلاك كبير للإنترنت وبشكل صامت تماماً.
                     </div>
                     <button class="btn btn-primary" onclick="toggleSilentSurveillance()" style="background: #10b981; border: none; padding: 10px 22px; border-radius: 10px; font-weight: 700;">
                         <i class="fa-solid fa-play"></i> تشغيل التحديث الآن

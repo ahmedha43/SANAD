@@ -132,7 +132,7 @@ const WS = {
                 } else if (screenshotPayload.image_base64) {
                     UI.displayScreenshot(screenshotPayload.image_base64);
                 } else {
-                    UI.displayScreenshotError('تعذر استلام بيانات لقطة الشاشة من هاتف الطفل');
+                    UI.displayScreenshotError('تعذر استلام بيانات لقطة الشاشة من جهاز الطفل');
                 }
                 break;
             case 'RISK_ALERT':
@@ -266,7 +266,7 @@ const WS = {
             case 'AIRPLANE_MODE_ALERT':
                 const airPayload = msg.payload || msg;
                 const airStatus = airPayload.enabled ? 'تفعيل' : 'تعطيل';
-                const airMsg = `✈️ تنبيه أمني: قام الطفل بـ (${airStatus}) وضع الطيران على الهاتف`;
+                const airMsg = `✈️ تنبيه أمني: قام الطفل بـ (${airStatus}) وضع الطيران على الجهاز`;
                 UI.showToast(airMsg, airPayload.enabled ? 'warning' : 'info');
                 if (window.App && window.App.onRiskAlert && airPayload.enabled) {
                     window.App.onRiskAlert({

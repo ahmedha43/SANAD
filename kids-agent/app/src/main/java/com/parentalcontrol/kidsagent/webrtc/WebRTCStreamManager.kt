@@ -238,7 +238,7 @@ class WebRTCStreamManager(
                             }
                             context.startActivity(promptIntent)
                             sendSignalingMessage("STREAM_ERROR", mapOf(
-                                "error" to "يتطلب بث الشاشة موافقة على هاتف الطفل (يظهر طلب الموافقة على الشاشة الآن)",
+                                "error" to "يتطلب بث الشاشة موافقة على جهاز الطفل (يظهر طلب الموافقة على الشاشة الآن)",
                                 "pending_permission" to true
                             ))
                         }
@@ -262,7 +262,7 @@ class WebRTCStreamManager(
                             }
                         } else {
                             Log.e(TAG, "Could not open camera capturer!")
-                            sendSignalingMessage("STREAM_ERROR", mapOf("error" to "تعذر فتح كاميرا هاتف الطفل"))
+                            sendSignalingMessage("STREAM_ERROR", mapOf("error" to "تعذر فتح كاميرا جهاز الطفل"))
                         }
                     } catch (e: Exception) {
                         Log.e(TAG, "Error initializing camera video capturer: ${e.message}")

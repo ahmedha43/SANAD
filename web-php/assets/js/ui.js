@@ -287,7 +287,7 @@ const UI = {
         if (downloadBtn) downloadBtn.style.display = 'none';
         if (errBox) {
             errBox.style.display = 'block';
-            if (errText) errText.textContent = errorMsg || 'تعذر التقاط لقطة الشاشة من هاتف الطفل';
+            if (errText) errText.textContent = errorMsg || 'تعذر التقاط لقطة الشاشة من جهاز الطفل';
         }
 
         this.openModal('screenshotModal');
@@ -438,7 +438,7 @@ const UI = {
         if (blockSettingsBtn) {
             if (!this.hasFeature('settings_protection')) {
                 blockSettingsBtn.classList.add('feature-locked');
-                blockSettingsBtn.setAttribute('title', 'ميزة حظر إعدادات الهاتف متاحة في الباقة المتقدمة فقط');
+                blockSettingsBtn.setAttribute('title', 'ميزة حظر إعدادات الجهاز متاحة في الباقة المتقدمة فقط');
             } else {
                 blockSettingsBtn.classList.remove('feature-locked');
             }

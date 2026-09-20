@@ -9,7 +9,7 @@ declare(strict_types=1);
         <div class="panel-title-group">
             <i class="fa-solid fa-cubes" style="color: var(--accent-purple)"></i>
             <div>
-                <h3>إدارة وتطبيقات هاتف الطفل (App Management & Blocker)</h3>
+                <h3>إدارة وتطبيقات جهاز الطفل (App Management & Blocker)</h3>
                 <span class="sub-text">التحكم الفوري في قفل وحظر التطبيقات المثبتة على جهاز الطفل بنقرة واحدة</span>
             </div>
         </div>

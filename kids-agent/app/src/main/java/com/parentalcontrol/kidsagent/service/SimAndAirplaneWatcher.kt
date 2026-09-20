@@ -93,11 +93,11 @@ class SimAndAirplaneWatcher(private val context: Context) {
         val payload = mapOf(
             "category" to "AIRPLANE_MODE",
             "severity" to "HIGH",
-            "snippet" to "تم تفعيل وضع الطيران (Airplane Mode) على هاتف الطفل لمحاولة قطع الاتصال والمراقبة",
+            "snippet" to "تم تفعيل وضع الطيران (Airplane Mode) على جهاز الطفل لمحاولة قطع الاتصال والمراقبة",
             "timestamp" to System.currentTimeMillis()
         )
         ForegroundSyncService.instance?.sendWsMessage("AIRPLANE_MODE_ALERT", payload)
-        ForegroundSyncService.reportTamperAlert(context, "تم تفعيل وضع الطيران على هاتف الطفل لمحاولة قطع الاتصال والمراقبة", "AIRPLANE_MODE")
+        ForegroundSyncService.reportTamperAlert(context, "تم تفعيل وضع الطيران على جهاز الطفل لمحاولة قطع الاتصال والمراقبة", "AIRPLANE_MODE")
     }
 
     private fun checkSimCardChange() {
@@ -113,12 +113,12 @@ class SimAndAirplaneWatcher(private val context: Context) {
             val payload = mapOf(
                 "category" to "SIM_REMOVED",
                 "severity" to "CRITICAL",
-                "snippet" to "تمت إزالة شريحة الاتصال (SIM Card) من هاتف الطفل!",
+                "snippet" to "تمت إزالة شريحة الاتصال (SIM Card) من جهاز الطفل!",
                 "operator" to "بدون شريحة",
                 "timestamp" to System.currentTimeMillis()
             )
             ForegroundSyncService.instance?.sendWsMessage("SIM_SWAP_ALERT", payload)
-            ForegroundSyncService.reportTamperAlert(context, "تمت إزالة شريحة الاتصال من هاتف الطفل!", "SIM_REMOVED")
+            ForegroundSyncService.reportTamperAlert(context, "تمت إزالة شريحة الاتصال من جهاز الطفل!", "SIM_REMOVED")
             return
         }
 
@@ -135,7 +135,7 @@ class SimAndAirplaneWatcher(private val context: Context) {
                         "timestamp" to System.currentTimeMillis()
                     )
                     ForegroundSyncService.instance?.sendWsMessage("SIM_SWAP_ALERT", payload)
-                    ForegroundSyncService.reportTamperAlert(context, "تم تبديل شريحة الاتصال في الهاتف إلى: $currentOperator", "SIM_SWAPPED")
+                    ForegroundSyncService.reportTamperAlert(context, "تم تبديل شريحة الاتصال في الجهاز إلى: $currentOperator", "SIM_SWAPPED")
                 }
             }
         }

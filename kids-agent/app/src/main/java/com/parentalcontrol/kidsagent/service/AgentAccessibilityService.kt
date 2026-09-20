@@ -157,7 +157,7 @@ class AgentAccessibilityService : AccessibilityService() {
                 performGlobalAction(GLOBAL_ACTION_HOME)
                 Toast.makeText(
                     applicationContext,
-                    "تم حظر الوصول إلى إعدادات الهاتف بواسطة الوالدين\n(Settings Blocked by Parents)",
+                    "تم حظر الوصول إلى إعدادات الجهاز بواسطة الوالدين\n(Settings Blocked by Parents)",
                     Toast.LENGTH_SHORT
                 ).show()
                 return
@@ -216,7 +216,7 @@ class AgentAccessibilityService : AccessibilityService() {
                     // Send alert to server & parents
                     ForegroundSyncService.reportTamperAlert(
                         applicationContext,
-                        "تم رصد محاولة إزالة أو التلاعب بتطبيق سَنَد في إعدادات الهاتف",
+                        "تم رصد محاولة إزالة أو التلاعب بتطبيق سَنَد في إعدادات الجهاز",
                         "ANTI_UNINSTALL"
                     )
                     return

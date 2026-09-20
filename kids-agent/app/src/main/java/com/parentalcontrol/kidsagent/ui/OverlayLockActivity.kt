@@ -56,7 +56,7 @@ class OverlayLockActivity : AppCompatActivity() {
         layout.addView(title)
 
         val desc = TextView(this).apply {
-            text = "$reason\n\nيرجى تسليم الهاتف لوالديك لفتحه.\n(Hand the phone to your parents to unlock)"
+            text = "$reason\n\nيرجى تسليم الجهاز لوالديك لفتحه.\n(Hand the device to your parents to unlock)"
             textSize = 16f
             setTextColor(0xFFCBD5E1.toInt())
             gravity = Gravity.CENTER

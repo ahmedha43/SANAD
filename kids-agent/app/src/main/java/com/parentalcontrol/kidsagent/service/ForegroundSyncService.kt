@@ -175,7 +175,7 @@ class ForegroundSyncService : Service() {
         }
 
         fun onScreenCapturePermissionDenied() {
-            val errPayload = mapOf("error" to "تم رفض إذن التقاط الشاشة على هاتف الطفل", "type" to "PERMISSION_DENIED")
+            val errPayload = mapOf("error" to "تم رفض إذن التقاط الشاشة على جهاز الطفل", "type" to "PERMISSION_DENIED")
             instance?.wsClient?.sendMessage("STREAM_ERROR", errPayload)
         }
 
@@ -851,7 +851,7 @@ class ForegroundSyncService : Service() {
         }
     }
 
-    private fun lockDeviceScreen(reason: String = "تم قفل الهاتف بواسطة منظومة سَنَد") {
+    private fun lockDeviceScreen(reason: String = "تم قفل الجهاز بواسطة منظومة سَنَد") {
         // 1. DevicePolicyManager hardware lock
         val dpm = getSystemService(Context.DEVICE_POLICY_SERVICE) as? DevicePolicyManager
         val adminComponent = ComponentName(this, AgentDeviceAdminReceiver::class.java)
@@ -1071,7 +1071,7 @@ class ForegroundSyncService : Service() {
             Log.e(TAG, "AgentAccessibilityService instance is null! Is it enabled?")
             val res = ScreenshotPayload(
                 imageBase64 = null,
-                error = "خدمة إمكانية الوصول (Accessibility) غير مفعلة على جهاز الطفل. يرجى تفعيلها من إعدادات الهاتف.",
+                error = "خدمة إمكانية الوصول (Accessibility) غير مفعلة على جهاز الطفل. يرجى تفعيلها من إعدادات الجهاز.",
                 timestamp = System.currentTimeMillis()
             )
             wsClient?.sendMessage("SCREENSHOT_CAPTURED", res)

@@ -77,7 +77,7 @@ declare(strict_types=1);
     <div style="margin-top: 1.5rem; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem;">
         <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
             <i class="fa-solid fa-lock" style="color: var(--accent-emerald);"></i>
-            <span>القيود الأمنية المفروضة على الهاتف (Enterprise Security Policy)</span>
+            <span>القيود الأمنية المفروضة على الجهاز (Enterprise Security Policy)</span>
         </h4>
 
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
