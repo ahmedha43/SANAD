@@ -81,7 +81,18 @@ namespace Sanad.UI.Forms
                 Dock = DockStyle.Fill,
                 BackColor = Color.FromArgb(30, 41, 59),
                 ForeColor = Color.FromArgb(52, 211, 153), // Emerald
-                BorderStyle = BorderStyle.FixedSingle
+                BorderStyle = BorderStyle.FixedSingle,
+                RightToLeft = RightToLeft.No
+            };
+            _txtCode.TextChanged += (s, e) =>
+            {
+                var norm = ApiClient.NormalizeDigits(_txtCode.Text);
+                if (norm != _txtCode.Text)
+                {
+                    var pos = _txtCode.SelectionStart;
+                    _txtCode.Text = norm;
+                    _txtCode.SelectionStart = Math.Min(norm.Length, pos);
+                }
             };
             codePanel.Controls.Add(_txtCode);
 
@@ -89,13 +100,14 @@ namespace Sanad.UI.Forms
             var lblServer = new Label { Text = "عنوان الخادم (Server Host):", Font = new Font("Segoe UI", 8), ForeColor = Color.Gray, Dock = DockStyle.Top, Height = 18 };
             _txtServer = new TextBox
             {
-                Text = _configService.Current.ServerUrl,
+                Text = ApiClient.CleanUrl(_configService.Current.ServerUrl),
                 Font = new Font("Segoe UI", 10),
                 Dock = DockStyle.Bottom,
                 Height = 26,
                 BackColor = Color.FromArgb(30, 41, 59),
                 ForeColor = Color.White,
-                BorderStyle = BorderStyle.FixedSingle
+                BorderStyle = BorderStyle.FixedSingle,
+                RightToLeft = RightToLeft.No
             };
             serverPanel.Controls.Add(_txtServer);
             serverPanel.Controls.Add(lblServer);

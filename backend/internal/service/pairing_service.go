@@ -83,7 +83,8 @@ type PairDeviceResponse struct {
 
 // PairKidDevice validates pairing code and registers the child's Android or Windows device
 func (s *PairingService) PairKidDevice(ctx context.Context, req PairDeviceRequest) (*PairDeviceResponse, error) {
-	pc, err := s.repo.GetValidPairingCode(ctx, req.Code)
+	cleanCode := normalizePairingCode(req.Code)
+	pc, err := s.repo.GetValidPairingCode(ctx, cleanCode)
 	if err != nil || pc == nil {
 		return nil, errors.New("كود الاقتران غير صالح أو منتهي الصلاحية")
 	}
@@ -164,7 +165,7 @@ func (s *PairingService) PairKidDevice(ctx context.Context, req PairDeviceReques
 	}
 
 	// Mark pairing code as used
-	_ = s.repo.MarkPairingCodeUsed(ctx, req.Code)
+	_ = s.repo.MarkPairingCodeUsed(ctx, cleanCode)
 
 	return &PairDeviceResponse{
 		DeviceID:      deviceID,
@@ -173,4 +174,18 @@ func (s *PairingService) PairKidDevice(ctx context.Context, req PairDeviceReques
 		PairingSecret: pairingSecret,
 		ServerTime:    time.Now().UnixMilli(),
 	}, nil
+}
+
+func normalizePairingCode(code string) string {
+	var b strings.Builder
+	for _, r := range strings.TrimSpace(code) {
+		if r >= '0' && r <= '9' {
+			b.WriteRune(r)
+		} else if r >= '\u0660' && r <= '\u0669' {
+			b.WriteRune('0' + (r - '\u0660'))
+		} else if r >= '\u06F0' && r <= '\u06F9' {
+			b.WriteRune('0' + (r - '\u06F0'))
+		}
+	}
+	return b.String()
 }

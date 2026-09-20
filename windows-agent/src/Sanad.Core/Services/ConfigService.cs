@@ -42,6 +42,12 @@ namespace Sanad.Core.Services
                         {
                             cfg.DeviceUid = GetOrCreateDeviceUid();
                         }
+                        if (!string.IsNullOrEmpty(cfg.ServerUrl))
+                        {
+                            cfg.ServerUrl = ApiClient.CleanUrl(cfg.ServerUrl);
+                            var wsHost = cfg.ServerUrl.Replace("http://", "ws://").Replace("https://", "wss://");
+                            cfg.WsUrl = $"{wsHost}/ws";
+                        }
                         _currentConfig = cfg;
                         return _currentConfig;
                     }
@@ -67,6 +73,13 @@ namespace Sanad.Core.Services
                 if (!Directory.Exists(ConfigDirectory))
                 {
                     Directory.CreateDirectory(ConfigDirectory);
+                }
+
+                if (!string.IsNullOrEmpty(config.ServerUrl))
+                {
+                    config.ServerUrl = ApiClient.CleanUrl(config.ServerUrl);
+                    var wsHost = config.ServerUrl.Replace("http://", "ws://").Replace("https://", "wss://");
+                    config.WsUrl = $"{wsHost}/ws";
                 }
 
                 var options = new JsonSerializerOptions { WriteIndented = true };

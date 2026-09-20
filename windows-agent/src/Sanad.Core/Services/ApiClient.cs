@@ -20,14 +20,72 @@ namespace Sanad.Core.Services
             };
         }
 
+        public static string CleanUrl(string? url)
+        {
+            if (string.IsNullOrWhiteSpace(url)) return "http://192.168.1.106:8080";
+
+            var sb = new System.Text.StringBuilder();
+            foreach (char c in url.Trim())
+            {
+                // Only keep printable ASCII characters (strip BOM, LRM, RLM, zero-width chars)
+                if (c >= 0x21 && c <= 0x7E)
+                {
+                    sb.Append(c);
+                }
+            }
+
+            var clean = sb.ToString().TrimEnd('/');
+            if (!clean.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+                !clean.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                clean = "http://" + clean;
+            }
+            return clean;
+        }
+
+        public static string NormalizeDigits(string? input)
+        {
+            if (string.IsNullOrWhiteSpace(input)) return string.Empty;
+
+            var sb = new System.Text.StringBuilder();
+            foreach (char c in input)
+            {
+                if (c >= '0' && c <= '9')
+                {
+                    sb.Append(c);
+                }
+                else if (c >= '\u0660' && c <= '\u0669') // Arabic-Indic digits ٠-٩
+                {
+                    sb.Append((char)('0' + (c - '\u0660')));
+                }
+                else if (c >= '\u06F0' && c <= '\u06F9') // Eastern Arabic-Indic digits ۰-۹
+                {
+                    sb.Append((char)('0' + (c - '\u06F0')));
+                }
+            }
+            return sb.ToString();
+        }
+
         public async Task<(bool success, string message)> PairDeviceAsync(string code, string? customServerUrl = null)
         {
             try
             {
-                var cfg = _configService.Current;
-                if (!string.IsNullOrEmpty(customServerUrl))
+                var cleanCode = NormalizeDigits(code);
+                if (string.IsNullOrEmpty(cleanCode) || cleanCode.Length < 4)
                 {
-                    cfg.ServerUrl = customServerUrl.TrimEnd('/');
+                    return (false, "يرجى إدخال كود اقتران صالح مكون من 6 أرقام");
+                }
+
+                var cfg = _configService.Current;
+                if (!string.IsNullOrWhiteSpace(customServerUrl))
+                {
+                    cfg.ServerUrl = CleanUrl(customServerUrl);
+                    var wsHost = cfg.ServerUrl.Replace("http://", "ws://").Replace("https://", "wss://");
+                    cfg.WsUrl = $"{wsHost}/ws";
+                }
+                else
+                {
+                    cfg.ServerUrl = CleanUrl(cfg.ServerUrl);
                     var wsHost = cfg.ServerUrl.Replace("http://", "ws://").Replace("https://", "wss://");
                     cfg.WsUrl = $"{wsHost}/ws";
                 }
@@ -35,7 +93,7 @@ namespace Sanad.Core.Services
                 var pairUrl = $"{cfg.ServerUrl}/api/v1/devices/pair";
                 var req = new PairDeviceRequest
                 {
-                    Code = code.Trim(),
+                    Code = cleanCode,
                     DeviceUid = cfg.DeviceUid,
                     DeviceName = cfg.DeviceName,
                     Model = cfg.Model,
