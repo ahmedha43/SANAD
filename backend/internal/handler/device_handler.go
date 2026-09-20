@@ -309,10 +309,10 @@ func (h *DeviceHandler) GetScreenTimeRule(c *fiber.Ctx) error {
 	if err != nil {
 		return c.JSON(domain.ScreenTimeRule{
 			DeviceID:          deviceID,
-			DailyLimitMinutes: 120,
-			DowntimeStart:     "21:00",
-			DowntimeEnd:       "07:00",
-			IsActive:          true,
+			DailyLimitMinutes: 0,
+			DowntimeStart:     "",
+			DowntimeEnd:       "",
+			IsActive:          false,
 		})
 	}
 	return c.JSON(rule)
