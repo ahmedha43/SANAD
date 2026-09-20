@@ -104,6 +104,15 @@ const API = {
     toggleWebFilterRule: (deviceId, ruleId, isActive) => API._request('PUT', `/devices/${deviceId}/web-filter/${ruleId}/toggle`, { is_active: isActive }),
     deleteWebFilterRule: (deviceId, ruleId) => API.del(`/devices/${deviceId}/web-filter/${ruleId}`),
     seedWebFilterDefaults: (deviceId) => API.post(`/devices/${deviceId}/web-filter/seed-defaults`, {}),
+
+    // Browser History & Safe Search
+    getBrowserHistory: (deviceId, params = {}) => {
+        const q = new URLSearchParams(params).toString();
+        return API.get(`/devices/${deviceId}/browser-history${q ? '?' + q : ''}`);
+    },
+    getBrowserHistoryStats: (deviceId) => API.get(`/devices/${deviceId}/browser-history/stats`),
+    clearBrowserHistory: (deviceId) => API.del(`/devices/${deviceId}/browser-history`),
+    quickBlockBrowserDomain: (deviceId, data) => API.post(`/devices/${deviceId}/browser-history/quick-block`, data),
 };
 
 window.API = API;

@@ -2028,4 +2028,56 @@ input:checked + .slider.round:before { transform: translateX(20px); }
     border-color: rgba(239, 68, 68, 0.4);
 }
 
+/* ==========================================
+   Browser History & Safe Search Explorer
+   ========================================== */
+.search-keyword-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(139, 92, 246, 0.12);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    color: #e2e8f0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.search-keyword-chip:hover {
+    background: rgba(139, 92, 246, 0.25);
+    border-color: #a855f7;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+}
+
+.search-keyword-chip .kw-count {
+    background: rgba(139, 92, 246, 0.4);
+    color: #fff;
+    font-size: 0.72rem;
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-weight: 700;
+}
+
+.search-term-highlight {
+    background: rgba(234, 179, 8, 0.15);
+    border: 1px solid rgba(234, 179, 8, 0.35);
+    color: #fde047;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.row-blocked {
+    background: rgba(239, 68, 68, 0.04) !important;
+}
+
+.row-blocked:hover {
+    background: rgba(239, 68, 68, 0.08) !important;
+}
+
+
 

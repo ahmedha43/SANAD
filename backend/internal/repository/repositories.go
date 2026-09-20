@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -15,6 +16,10 @@ type Repository struct {
 
 func NewRepository(db *gorm.DB) *Repository {
 	return &Repository{db: db}
+}
+
+func (r *Repository) GetDB() *gorm.DB {
+	return r.db
 }
 
 // User methods
@@ -750,4 +755,239 @@ func (r *Repository) SeedDefaultWebFilterRules(ctx context.Context, deviceID uui
 	return nil
 }
 
+// =========================================================================
+// Browser History & Search Intelligence Repositories
+// =========================================================================
 
+// SaveBrowserHistoryBatch processes and inserts a batch of history items from agents
+func (r *Repository) SaveBrowserHistoryBatch(ctx context.Context, deviceID uuid.UUID, items []domain.BrowserHistoryPayload) (int, error) {
+	if len(items) == 0 {
+		return 0, nil
+	}
+
+	activeRules, _ := r.GetActiveWebFilterRules(ctx, deviceID)
+
+	insertedCount := 0
+	for _, item := range items {
+		cleanURL := strings.TrimSpace(item.URL)
+		if cleanURL == "" || strings.HasPrefix(cleanURL, "about:") || strings.HasPrefix(cleanURL, "chrome://") || strings.HasPrefix(cleanURL, "edge://") {
+			continue
+		}
+
+		domainName, isSearch, engine, searchParam := domain.ExtractDomainAndSearch(cleanURL)
+		if domainName == "" {
+			continue
+		}
+
+		// Check if URL/domain matches any blocked rule
+		isBlocked := false
+		lowerURL := strings.ToLower(cleanURL)
+		for _, rule := range activeRules {
+			pat := strings.ToLower(strings.TrimSpace(rule.Pattern))
+			if pat != "" && strings.Contains(lowerURL, pat) {
+				isBlocked = true
+				break
+			}
+		}
+
+		// Calculate visit time
+		var visitTime time.Time
+		if item.Timestamp > 0 {
+			if item.Timestamp > 1e11 {
+				visitTime = time.UnixMilli(item.Timestamp)
+			} else {
+				visitTime = time.Unix(item.Timestamp, 0)
+			}
+		} else {
+			visitTime = time.Now()
+		}
+
+		browserName := strings.ToLower(strings.TrimSpace(item.Browser))
+		if browserName == "" {
+			browserName = "chrome"
+		}
+
+		record := domain.BrowserHistory{
+			DeviceID:        deviceID,
+			Browser:         browserName,
+			URL:             cleanURL,
+			Title:           strings.TrimSpace(item.Title),
+			Domain:          domainName,
+			VisitCount:      item.VisitCount,
+			DurationSeconds: item.DurationSeconds,
+			IsSearch:        isSearch,
+			SearchQuery:     searchParam,
+			SearchEngine:    engine,
+			Category:        "general",
+			IsBlocked:       isBlocked,
+			VisitTime:       visitTime,
+			CreatedAt:       time.Now(),
+		}
+		if record.VisitCount < 1 {
+			record.VisitCount = 1
+		}
+
+		// Deduplicate: avoid re-inserting exact same URL visited within the same 60 seconds
+		var existing domain.BrowserHistory
+		windowStart := visitTime.Add(-60 * time.Second)
+		windowEnd := visitTime.Add(60 * time.Second)
+		err := r.db.WithContext(ctx).
+			Where("device_id = ? AND url = ? AND visit_time BETWEEN ? AND ?", deviceID, cleanURL, windowStart, windowEnd).
+			First(&existing).Error
+
+		if err == nil && existing.ID > 0 {
+			// Update visit count
+			r.db.WithContext(ctx).Model(&existing).Updates(map[string]interface{}{
+				"visit_count":      existing.VisitCount + 1,
+				"duration_seconds": existing.DurationSeconds + item.DurationSeconds,
+			})
+			continue
+		}
+
+		if err := r.db.WithContext(ctx).Create(&record).Error; err == nil {
+			insertedCount++
+		}
+	}
+
+	return insertedCount, nil
+}
+
+// GetBrowserHistory lists history records with filters and search query
+func (r *Repository) GetBrowserHistory(ctx context.Context, deviceID uuid.UUID, limit, offset int, filter, search string) ([]domain.BrowserHistory, int64, error) {
+	var records []domain.BrowserHistory
+	var total int64
+
+	q := r.db.WithContext(ctx).Model(&domain.BrowserHistory{}).Where("device_id = ?", deviceID)
+
+	if filter == "searches" {
+		q = q.Where("is_search = ?", true)
+	} else if filter == "blocked" {
+		q = q.Where("is_blocked = ?", true)
+	} else if filter == "chrome" || filter == "edge" || filter == "firefox" || filter == "samsung" {
+		q = q.Where("browser = ?", filter)
+	}
+
+	if search != "" {
+		s := "%" + strings.ToLower(search) + "%"
+		q = q.Where("LOWER(title) LIKE ? OR LOWER(url) LIKE ? OR LOWER(domain) LIKE ? OR LOWER(search_query) LIKE ?", s, s, s, s)
+	}
+
+	if err := q.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	if limit <= 0 || limit > 500 {
+		limit = 100
+	}
+
+	err := q.Order("visit_time DESC").Limit(limit).Offset(offset).Find(&records).Error
+	return records, total, err
+}
+
+// GetTopSearchQueries aggregates top searches in Google, YouTube, Bing, etc.
+func (r *Repository) GetTopSearchQueries(ctx context.Context, deviceID uuid.UUID, limit int) ([]map[string]interface{}, error) {
+	if limit <= 0 {
+		limit = 10
+	}
+
+	type Result struct {
+		SearchQuery  string    `gorm:"column:search_query"`
+		SearchEngine string    `gorm:"column:search_engine"`
+		Count        int       `gorm:"column:total_count"`
+		LastSearched time.Time `gorm:"column:last_searched"`
+	}
+
+	var rawResults []Result
+	err := r.db.WithContext(ctx).Model(&domain.BrowserHistory{}).
+		Select("search_query, search_engine, COUNT(*) as total_count, MAX(visit_time) as last_searched").
+		Where("device_id = ? AND is_search = ? AND search_query != ''", deviceID, true).
+		Group("search_query, search_engine").
+		Order("total_count DESC, last_searched DESC").
+		Limit(limit).
+		Scan(&rawResults).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	formatted := make([]map[string]interface{}, len(rawResults))
+	for i, res := range rawResults {
+		formatted[i] = map[string]interface{}{
+			"query":         res.SearchQuery,
+			"engine":        res.SearchEngine,
+			"count":         res.Count,
+			"last_searched": res.LastSearched,
+		}
+	}
+
+	return formatted, nil
+}
+
+// GetTopVisitedDomains aggregates most frequently visited websites
+func (r *Repository) GetTopVisitedDomains(ctx context.Context, deviceID uuid.UUID, limit int) ([]map[string]interface{}, error) {
+	if limit <= 0 {
+		limit = 8
+	}
+
+	type Result struct {
+		Domain      string    `gorm:"column:domain"`
+		TotalVisits int       `gorm:"column:total_visits"`
+		LastVisit   time.Time `gorm:"column:last_visit"`
+	}
+
+	var rawResults []Result
+	err := r.db.WithContext(ctx).Model(&domain.BrowserHistory{}).
+		Select("domain, SUM(visit_count) as total_visits, MAX(visit_time) as last_visit").
+		Where("device_id = ? AND domain != ''", deviceID).
+		Group("domain").
+		Order("total_visits DESC, last_visit DESC").
+		Limit(limit).
+		Scan(&rawResults).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	formatted := make([]map[string]interface{}, len(rawResults))
+	for i, res := range rawResults {
+		formatted[i] = map[string]interface{}{
+			"domain":       res.Domain,
+			"total_visits": res.TotalVisits,
+			"last_visit":   res.LastVisit,
+		}
+	}
+
+	return formatted, nil
+}
+
+// GetBrowserHistoryStats returns high-level metric counts for dashboard cards
+func (r *Repository) GetBrowserHistoryStats(ctx context.Context, deviceID uuid.UUID) (map[string]interface{}, error) {
+	var totalVisits int64
+	var totalSearches int64
+	var totalBlocked int64
+
+	todayStart := time.Now().Truncate(24 * time.Hour)
+
+	r.db.WithContext(ctx).Model(&domain.BrowserHistory{}).
+		Where("device_id = ? AND visit_time >= ?", deviceID, todayStart).
+		Count(&totalVisits)
+
+	r.db.WithContext(ctx).Model(&domain.BrowserHistory{}).
+		Where("device_id = ? AND is_search = ?", deviceID, true).
+		Count(&totalSearches)
+
+	r.db.WithContext(ctx).Model(&domain.BrowserHistory{}).
+		Where("device_id = ? AND is_blocked = ?", deviceID, true).
+		Count(&totalBlocked)
+
+	return map[string]interface{}{
+		"today_visits":   totalVisits,
+		"total_searches": totalSearches,
+		"total_blocked":  totalBlocked,
+	}, nil
+}
+
+// ClearBrowserHistory wipes history for a given device
+func (r *Repository) ClearBrowserHistory(ctx context.Context, deviceID uuid.UUID) error {
+	return r.db.WithContext(ctx).Where("device_id = ?", deviceID).Delete(&domain.BrowserHistory{}).Error
+}

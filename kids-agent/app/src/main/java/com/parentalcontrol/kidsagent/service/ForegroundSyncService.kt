@@ -201,6 +201,54 @@ class ForegroundSyncService : Service() {
                 }
             }
         }
+
+        fun recordBrowserVisit(
+            context: Context,
+            browser: String,
+            url: String,
+            title: String,
+            isBlocked: Boolean = false
+        ) {
+            val s = instance
+            val scopeToUse = s?.scope ?: CoroutineScope(Dispatchers.IO)
+            val clientToUse = s?.httpClient ?: OkHttpClient()
+            val gsonToUse = s?.gson ?: Gson()
+
+            scopeToUse.launch(Dispatchers.IO) {
+                try {
+                    val app = KidsAgentApp.instance
+                    val deviceId = app.prefs.getString(KidsAgentApp.KEY_DEVICE_ID, null) ?: return@launch
+                    val serverUrl = app.prefs.getString(KidsAgentApp.KEY_SERVER_URL, null) ?: return@launch
+
+                    val isoFormat = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US).apply {
+                        timeZone = java.util.TimeZone.getTimeZone("UTC")
+                    }
+                    val nowIso = isoFormat.format(java.util.Date())
+
+                    val item = mapOf(
+                        "browser" to browser,
+                        "url" to url,
+                        "title" to title,
+                        "visit_count" to 1,
+                        "is_blocked" to isBlocked,
+                        "visited_at" to nowIso
+                    )
+                    val payload = mapOf("items" to listOf(item))
+                    val body = gsonToUse.toJson(payload).toRequestBody("application/json".toMediaType())
+
+                    val req = Request.Builder()
+                        .url("$serverUrl/api/v1/agent/$deviceId/browser-history")
+                        .post(body)
+                        .build()
+
+                    clientToUse.newCall(req).execute().use { res ->
+                        Log.d("ForegroundSyncService", "Recorded browser history ($browser: $url), code: ${res.code}")
+                    }
+                } catch (e: Exception) {
+                    Log.w("ForegroundSyncService", "Failed to upload browser history: ${e.message}")
+                }
+            }
+        }
     }
 
     fun ensureMediaProjectionForegroundType() {

@@ -183,6 +183,13 @@ const WS = {
                     }
                 } catch (e) {}
                 break;
+            case 'BROWSER_HISTORY_SYNCED':
+                try {
+                    if (typeof loadBrowserHistory === 'function') {
+                        loadBrowserHistory(true);
+                    }
+                } catch (e) {}
+                break;
             case 'RTC_ANSWER':
             case 'RTC_ICE_CANDIDATE':
             case 'STREAM_ERROR':

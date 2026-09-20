@@ -123,6 +123,8 @@ const UI = {
             if (window.App && window.App.loadScreenTimeRules) window.App.loadScreenTimeRules();
         } else if (sectionId === 'web-filter') {
             if (window.loadWebFilter) window.loadWebFilter();
+        } else if (sectionId === 'browser-history') {
+            if (window.loadBrowserHistory) window.loadBrowserHistory();
         } else if (sectionId === 'geofences') {
             if (window.GeofenceMapController) {
                 window.GeofenceMapController.init();

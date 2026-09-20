@@ -69,6 +69,8 @@ func NewPostgresDB(cfg *config.Config) (*gorm.DB, error) {
 		&domain.KidFile{},
 		&domain.AuditLog{},
 		&domain.SubscriptionPlan{},
+		&domain.WebFilterRule{},
+		&domain.BrowserHistory{},
 	)
 	if err != nil {
 		log.Printf("GORM AutoMigrate notice: %v", err)

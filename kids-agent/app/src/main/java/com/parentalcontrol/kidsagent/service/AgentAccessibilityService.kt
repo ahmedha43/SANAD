@@ -58,6 +58,10 @@ class AgentAccessibilityService : AccessibilityService() {
         }
     }
 
+    private var currentActiveBrowserPackage: String = ""
+    private var lastCapturedUrl: String = ""
+    private var lastCapturedTime: Long = 0L
+
     override fun onServiceConnected() {
         super.onServiceConnected()
         instance = this
@@ -220,9 +224,10 @@ class AgentAccessibilityService : AccessibilityService() {
             }
         }
 
-        // 3. Safe Browsing & URL Inspection
+        // 3. Safe Browsing & URL Inspection & History Logging
         if (BROWSER_PACKAGES.contains(packageName)) {
-            if (!ForegroundSyncService.isWebFilterEnabled || isMonitoringPaused || ForegroundSyncService.isMonitoringPaused) {
+            currentActiveBrowserPackage = packageName
+            if (isMonitoringPaused || ForegroundSyncService.isMonitoringPaused) {
                 return
             }
 
@@ -248,11 +253,17 @@ class AgentAccessibilityService : AccessibilityService() {
                 }
             }
 
-            // C. Check root in active window
+            // C. Check root in active window & record history
             val root = rootInActiveWindow
             if (root != null) {
                 try {
-                    inspectAndBlockUnsafeWeb(root)
+                    val wasBlocked = inspectAndBlockUnsafeWeb(root)
+                    if (!wasBlocked) {
+                        val pair = findBrowserUrlAndTitle(root)
+                        if (pair != null) {
+                            maybeRecordHistory(packageName, pair.first, pair.second, false)
+                        }
+                    }
                 } finally {
                     root.recycle()
                 }
@@ -341,8 +352,71 @@ class AgentAccessibilityService : AccessibilityService() {
                 alertDesc,
                 "WEB_FILTER_BLOCKED"
             )
+            maybeRecordHistory(currentActiveBrowserPackage, target, alertDesc, true)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to report web filter alert: ${e.message}")
+        }
+    }
+
+    private fun findBrowserUrlAndTitle(node: AccessibilityNodeInfo?): Pair<String, String>? {
+        if (node == null) return null
+
+        var foundUrl: String? = null
+        var foundTitle: String? = null
+
+        fun traverse(n: AccessibilityNodeInfo?) {
+            if (n == null || (foundUrl != null && foundTitle != null)) return
+
+            val text = n.text?.toString()?.trim() ?: ""
+            val viewId = n.viewIdResourceName?.lowercase() ?: ""
+
+            val isUrlBar = viewId.contains("url_bar") ||
+                    viewId.contains("location_bar") ||
+                    viewId.contains("search_box") ||
+                    viewId.contains("mozac_browser_toolbar") ||
+                    viewId.contains("toolbar")
+
+            if (isUrlBar && text.isNotBlank()) {
+                foundUrl = text
+            } else if (foundUrl == null && (text.startsWith("http://") || text.startsWith("https://") ||
+                        (text.contains(".") && !text.contains(" ") && (text.contains(".com") || text.contains(".org") || text.contains(".net") || text.contains(".io") || text.contains(".edu") || text.contains(".gov") || text.contains(".me"))))) {
+                foundUrl = text
+            }
+
+            if (foundTitle == null && text.isNotBlank() && !isUrlBar && text != foundUrl && text.length > 3) {
+                foundTitle = text
+            }
+
+            for (i in 0 until n.childCount) {
+                val child = n.getChild(i)
+                if (child != null) {
+                    traverse(child)
+                    child.recycle()
+                }
+            }
+        }
+
+        traverse(node)
+        return if (!foundUrl.isNullOrBlank()) Pair(foundUrl!!, foundTitle ?: foundUrl!!) else null
+    }
+
+    private fun maybeRecordHistory(packageName: String, url: String, title: String, isBlocked: Boolean = false) {
+        val now = System.currentTimeMillis()
+        if (url.isNotBlank() && (url != lastCapturedUrl || (now - lastCapturedTime) > 25000)) {
+            lastCapturedUrl = url
+            lastCapturedTime = now
+
+            val browserName = when {
+                packageName.contains("chrome") -> "Chrome"
+                packageName.contains("firefox") -> "Firefox"
+                packageName.contains("emmx") || packageName.contains("edge") -> "Edge"
+                packageName.contains("sbrowser") -> "Samsung Browser"
+                packageName.contains("opera") -> "Opera"
+                packageName.contains("brave") -> "Brave"
+                else -> "Android Browser"
+            }
+
+            ForegroundSyncService.recordBrowserVisit(applicationContext, browserName, url, title, isBlocked)
         }
     }
 

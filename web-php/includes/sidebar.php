@@ -66,6 +66,12 @@ declare(strict_types=1);
             <span class="nav-counter" id="webFilterCountBadge">0</span>
         </a>
 
+        <a href="#browser-history" class="nav-item" id="nav-browser-history" onclick="switchSection('browser-history', this)">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+            <span>سجل التصفح والبحث</span>
+            <span class="nav-counter" id="historyCountBadge">0</span>
+        </a>
+
         <div class="sidebar-category">سجلات النشاط والبيانات</div>
 
         <a href="#calls" class="nav-item" onclick="switchSection('calls', this)">

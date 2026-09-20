@@ -17,6 +17,7 @@ namespace Sanad.Core.Services
         public event Action? OnLockRequested;
         public event Action? OnUnlockRequested;
         public event Func<string, Task>? OnSendScreenshotRequested;
+        public event Func<Task>? OnSyncBrowserHistoryRequested;
 
         public CommandHandler(ConfigService configService, AudioAlarmService audioAlarmService)
         {
@@ -111,6 +112,13 @@ namespace Sanad.Core.Services
                     {
                         _configService.Current.BlockedProcesses.Remove(unpkgName);
                         _configService.Save(_configService.Current);
+                    }
+                    return (true, null);
+
+                case "SYNC_BROWSER_HISTORY":
+                    if (OnSyncBrowserHistoryRequested != null)
+                    {
+                        await OnSyncBrowserHistoryRequested();
                     }
                     return (true, null);
 

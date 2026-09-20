@@ -97,6 +97,11 @@ require_once __DIR__ . '/includes/sidebar.php';
         <?php require_once __DIR__ . '/views/filter/web_filter.php'; ?>
     </div>
 
+    <!-- SECTION 6.6: Cloud Browser History & Safe Search Explorer -->
+    <div class="content-section" id="section-browser-history" style="display: none;">
+        <?php require_once __DIR__ . '/views/filter/browser_history.php'; ?>
+    </div>
+
     <!-- SECTION 7: Calls Log -->
     <div class="content-section" id="section-calls" style="display: none;">
         <?php require_once __DIR__ . '/views/data/calls.php'; ?>

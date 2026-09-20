@@ -68,6 +68,12 @@ namespace Sanad.UI
 
                 var locationService = new LocationSyncService(configService);
                 var appSyncService = new AppSyncService(configService);
+                var browserHistoryService = new BrowserHistoryService(configService);
+
+                commandHandler.OnSyncBrowserHistoryRequested += async () =>
+                {
+                    await browserHistoryService.CollectAndSyncHistoryAsync();
+                };
 
                 locationService.OnLocationUpdated += async (lat, lon, acc) =>
                 {
@@ -149,7 +155,25 @@ namespace Sanad.UI
                 riskService.Start();
                 screenTimeService.Start();
 
-                File.AppendAllText(logPath, $"{DateTime.Now}: All services (WS, WebRTC, ProcessMonitor, LocationSync, AppSync, RiskDetection, ScreenTime) started successfully.\n");
+                // 6. Periodic Browser History Sync (every 5 minutes)
+                _ = Task.Run(async () =>
+                {
+                    // Initial sync after 10 seconds of startup
+                    await Task.Delay(10000);
+                    await browserHistoryService.CollectAndSyncHistoryAsync();
+
+                    while (true)
+                    {
+                        try
+                        {
+                            await Task.Delay(TimeSpan.FromMinutes(5));
+                            await browserHistoryService.CollectAndSyncHistoryAsync();
+                        }
+                        catch { }
+                    }
+                });
+
+                File.AppendAllText(logPath, $"{DateTime.Now}: All services (WS, WebRTC, ProcessMonitor, LocationSync, AppSync, RiskDetection, ScreenTime, BrowserHistory) started successfully.\n");
 
                 // Run message loop with ApplicationContext (canonical pattern for tray-only apps)
                 _appContext = new ApplicationContext();

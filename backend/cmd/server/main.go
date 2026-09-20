@@ -85,6 +85,7 @@ func main() {
 
 	// Kid Agent Endpoints (Public/Device Auth)
 	webFilterHandler := handler.NewWebFilterHandler(repo, wsHub)
+	browserHistoryHandler := handler.NewBrowserHistoryHandler(repo, wsHub)
 	devicePublic := api.Group("/devices")
 	devicePublic.Post("/pair", deviceHandler.PairDevice)
 	devicePublic.Post("/:id/location", locationHandler.PostLocation)
@@ -98,6 +99,7 @@ func main() {
 	api.Get("/agent/:id/web-filter", webFilterHandler.GetAgentWebFilter)
 	api.Get("/agent/:id/safe-patterns", deviceHandler.GetSafeRiskPatterns)
 	api.Post("/agent/:id/notifications", appHandler.PostNotification)
+	api.Post("/agent/:id/browser-history", browserHistoryHandler.PostBrowserHistory)
 
 	// WebRTC Config
 	api.Get("/webrtc/config", webrtcHandler.GetRTCConfig)
@@ -149,6 +151,10 @@ func main() {
 	parentDevices.Put("/:id/web-filter/:rule_id/toggle", requireActiveSub, webFilterHandler.ToggleRule)
 	parentDevices.Delete("/:id/web-filter/:rule_id", requireActiveSub, webFilterHandler.DeleteRule)
 	parentDevices.Post("/:id/web-filter/seed-defaults", requireActiveSub, webFilterHandler.SeedDefaults)
+	parentDevices.Get("/:id/browser-history", requireActiveSub, browserHistoryHandler.GetBrowserHistory)
+	parentDevices.Get("/:id/browser-history/stats", requireActiveSub, browserHistoryHandler.GetBrowserHistoryStats)
+	parentDevices.Delete("/:id/browser-history", requireActiveSub, browserHistoryHandler.ClearBrowserHistory)
+	parentDevices.Post("/:id/browser-history/quick-block", requireActiveSub, browserHistoryHandler.QuickBlockDomain)
 
 	// Geofence Management (Protected - Requires Active Subscription & Geofencing Feature)
 	geofenceAPI := api.Group("/geofences", middleware.Protected(cfg.JWTSecret), requireActiveSub, requireGeofence)
