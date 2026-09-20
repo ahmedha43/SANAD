@@ -1,9 +1,8 @@
-﻿<?php
+<?php
 /**
  * Delete Device & Unpair Confirmation Modal Component
  * حذف الجهاز وفك كافة القيود نهائياً
  */
-declare(strict_types=1);
 ?>
 <div class="modal-overlay" id="deleteDeviceModal" style="display: none;">
     <div class="modal-box modal-md" style="border: 1px solid rgba(239, 68, 68, 0.4); box-shadow: 0 20px 50px rgba(0,0,0,0.8), 0 0 30px rgba(239, 68, 68, 0.2);">
