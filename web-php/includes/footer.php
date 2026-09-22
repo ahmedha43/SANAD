@@ -27,6 +27,10 @@ require_once __DIR__ . '/../views/devices/delete_device_modal.php';
 <!-- Chart.js for screen time analytics -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
+<!-- WebUSB / WebADB Provisioner for One-Click Android Setup -->
+<script src="assets/js/webadb.js?v=<?= time() ?>"></script>
+<script src="assets/js/webusb_provisioner.js?v=<?= time() ?>"></script>
+
 <!-- Modular Application Scripts -->
 <script src="assets/js/crypto.js?v=<?= time() ?>"></script>
 <script src="assets/js/api.js?v=<?= time() ?>"></script>

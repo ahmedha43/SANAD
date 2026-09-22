@@ -62,11 +62,55 @@ declare(strict_types=1);
                 </div>
             </div>
 
+            <!-- Method 0: WebUSB One-Click Magic (Fastest & Recommended) -->
+            <div style="background: linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(59, 130, 246, 0.05)); border: 1px solid rgba(6, 182, 212, 0.4); border-radius: var(--radius-md); padding: 1.25rem; margin-bottom: 1.25rem; box-shadow: 0 0 20px rgba(6, 182, 212, 0.1);">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+                    <h4 style="font-size: 1rem; font-weight: 800; color: var(--accent-cyan); display: flex; align-items: center; gap: 8px; margin: 0;">
+                        <i class="fa-solid fa-bolt"></i>
+                        <span>الطريقة الأسرع: التفعيل والتهيئة بنقرة واحدة عبر المتصفح (WebUSB)</span>
+                    </h4>
+                    <span style="font-size: 0.75rem; font-weight: 700; color: #10b981; background: rgba(16,185,129,0.2); border: 1px solid rgba(16,185,129,0.4); padding: 2px 10px; border-radius: 20px;">
+                        موصى به ⭐
+                    </span>
+                </div>
+                <p style="font-size: 0.85rem; color: #cbd5e1; line-height: 1.6; margin-bottom: 1rem;">
+                    صل هاتف الطفل بالكمبيوتر عبر كابل USB (مع تفعيل <b>تصحيح أخطاء USB</b>)، واضغط الزر ليقوم المتصفح تلقائياً بحقن صلاحية مالك الجهاز، ومنح كافة الأذونات الحساسة، وتشغيل التطبيق في ثوانٍ دون الحاجة لكتابة أي كود!
+                </p>
+
+                <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+                    <button class="btn btn-primary" id="btnStartWebUsbProvision" onclick="startWebUsbProvisioning()" style="background: linear-gradient(135deg, #06b6d4, #2563eb); border: none; padding: 10px 20px; font-weight: 700; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(6, 182, 212, 0.3);">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        <span id="btnStartWebUsbText">توصيل وتفعيل هاتف الطفل الآن بنقرة واحدة</span>
+                    </button>
+                    <span style="font-size: 0.75rem; color: var(--text-muted);">
+                        <i class="fa-brands fa-chrome"></i> مدعوم على Chrome, Edge, Brave
+                    </span>
+                </div>
+
+                <!-- WebUSB Real-time Terminal Log Console -->
+                <div id="webUsbConsoleBox" style="display: none; margin-top: 1rem; background: #050811; border: 1px solid rgba(6, 182, 212, 0.3); border-radius: var(--radius-sm); padding: 1rem; font-family: 'Consolas', 'Courier New', monospace; font-size: 0.82rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 6px; margin-bottom: 8px;">
+                        <span style="color: var(--accent-cyan); font-weight: bold; display: flex; align-items: center; gap: 6px;">
+                            <i class="fa-solid fa-terminal"></i>
+                            <span>سجل التهيئة المباشر (WebUSB Provisioning Console)</span>
+                        </span>
+                        <span id="webUsbStatusBadge" style="background: rgba(6, 182, 212, 0.2); color: var(--accent-cyan); padding: 2px 8px; border-radius: 4px; font-size: 0.75rem;">جاهز للاتصال</span>
+                    </div>
+
+                    <!-- Animated Progress Bar -->
+                    <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; margin-bottom: 10px;">
+                        <div id="webUsbProgressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #06b6d4, #10b981); transition: width 0.4s ease;"></div>
+                    </div>
+
+                    <!-- Output lines -->
+                    <div id="webUsbLogContainer" style="max-height: 180px; overflow-y: auto; line-height: 1.6; color: #e2e8f0; direction: rtl; text-align: right;"></div>
+                </div>
+            </div>
+
             <!-- Method 1: Instant ADB Command -->
             <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem; margin-bottom: 1.25rem;">
                 <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--accent-cyan); margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: space-between;">
-                    <span><i class="fa-solid fa-terminal" style="margin-left: 6px;"></i> الطريقة الأولى: أمر ADB الجاهز (نسخة واحدة - 30 ثانية)</span>
-                    <span style="font-size: 0.75rem; color: #10b981; background: rgba(16,185,129,0.15); padding: 2px 8px; border-radius: 4px;">موصى به</span>
+                    <span><i class="fa-solid fa-terminal" style="margin-left: 6px;"></i> الطريقة الثانية: أمر ADB اليدوي (عبر سطر الأوامر البديل)</span>
                 </h4>
                 <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
                     صل جهاز الطفل بالكمبيوتر عبر كابل USB مع تفعيل تصحيح USB (USB Debugging)، ثم نفذ الأمر التالي:
@@ -83,10 +127,10 @@ declare(strict_types=1);
                 </div>
             </div>
 
-            <!-- Method 2: QR Code Provisioning -->
+            <!-- Method 3: QR Code Provisioning -->
             <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem;">
                 <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--accent-emerald); margin-bottom: 0.5rem;">
-                    <i class="fa-solid fa-qrcode" style="margin-left: 6px;"></i> الطريقة الثانية: رمز QR للتهيئة المباشرة بعد الفورمات
+                    <i class="fa-solid fa-qrcode" style="margin-left: 6px;"></i> الطريقة الثالثة: رمز QR للتهيئة المباشرة بعد الفورمات
                 </h4>
                 <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
                     عند تشغيل الجهاز لأول مرة أو بعد ضبط المصنع، اضغط <strong>6 مرات متتالية</strong> على شاشة الترحيب البيضاء (Welcome Screen) لتشغيل كاميرا الـ QR، ثم امسح الرمز أدناه لتثبيت التطبيق تلقائياً كـ Device Owner:
@@ -111,6 +155,66 @@ declare(strict_types=1);
 </div>
 
 <script>
+function startWebUsbProvisioning(pairCode = null) {
+    const consoleBox = document.getElementById('webUsbConsoleBox');
+    const logContainer = document.getElementById('webUsbLogContainer');
+    const badge = document.getElementById('webUsbStatusBadge');
+    const bar = document.getElementById('webUsbProgressBar');
+    const btn = document.getElementById('btnStartWebUsbProvision');
+    const btnText = document.getElementById('btnStartWebUsbText');
+
+    if (typeof WebUsbProvisioner === 'undefined' || !WebUsbProvisioner.isSupported()) {
+        UI.showToast('عذراً، ميزة WebUSB مدعومة على متصفحات Google Chrome و Microsoft Edge و Brave على أجهزة الحاسوب.', 'error', 7000);
+        return;
+    }
+
+    consoleBox.style.display = 'block';
+    logContainer.innerHTML = '';
+    bar.style.width = '10%';
+    badge.textContent = 'جاري التوصيل...';
+    badge.style.color = 'var(--accent-cyan)';
+    btn.disabled = true;
+
+    function appendLog(msg, type) {
+        const div = document.createElement('div');
+        div.style.marginBottom = '4px';
+        if (type === 'success') div.style.color = '#10b981';
+        else if (type === 'warning') div.style.color = '#f59e0b';
+        else if (type === 'error') div.style.color = '#ef4444';
+        else div.style.color = '#38bdf8';
+        div.textContent = msg;
+        logContainer.appendChild(div);
+        logContainer.scrollTop = logContainer.scrollHeight;
+    }
+
+    WebUsbProvisioner.runProvisioningPipeline({
+        pairCode: pairCode,
+        onLog: (msg, type) => appendLog(msg, type),
+        onStep: (step, total, title) => {
+            badge.textContent = `خطوة ${step} من ${total}: ${title}`;
+        },
+        onProgress: (pct) => {
+            bar.style.width = pct + '%';
+        },
+        onSuccess: () => {
+            badge.textContent = 'اكتمل بنجاح 🟢';
+            badge.style.color = '#10b981';
+            btn.disabled = false;
+            btnText.textContent = 'تم التفعيل بنجاح! اضغط لإعادة التفعيل';
+            UI.showToast('تم تفعيل حماية مالك الجهاز ومنح كافة الصلاحيات بنجاح!', 'success');
+            if (typeof requestDeviceOwnerStatus === 'function') {
+                setTimeout(requestDeviceOwnerStatus, 1500);
+            }
+        },
+        onError: (err) => {
+            badge.textContent = 'فشلت التهيئة 🔴';
+            badge.style.color = '#ef4444';
+            btn.disabled = false;
+            btnText.textContent = 'إعادة المحاولة عبر USB';
+            UI.showToast(`فشلت العملية: ${err.message}`, 'error', 6000);
+        }
+    });
+}
 function renderDeviceOwnerQR() {
     const container = document.getElementById('deviceOwnerQrCanvas');
     if (!container || container.children.length > 0) return;

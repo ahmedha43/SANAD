@@ -2316,6 +2316,7 @@ async function submitCreateChild() {
         const pairRes = await API.generatePairCode(childId);
         const pairData = pairRes.data || pairRes;
         const code = pairData.code || '000000';
+        window._currentGeneratedPairCode = code;
 
         // Display digits
         const digits = code.toString().split('');
