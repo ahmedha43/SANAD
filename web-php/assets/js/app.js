@@ -105,11 +105,40 @@ window.PairingManager = {
         }
     },
 
+    _pollTimer: null,
+    startPairingPoll() {
+        if (this._pollTimer) return;
+        this._pollTimer = setInterval(async () => {
+            const hasUnpaired = STATE.children?.some(c => !STATE.devices?.some(d => d.child_id === c.id));
+            if (hasUnpaired) {
+                try {
+                    const devRes = await API.listDevices();
+                    const devs = devRes.data || devRes.devices || devRes || [];
+                    const newlyPaired = devs.some(d => {
+                        const oldDev = STATE.devices?.find(od => od.id === d.id);
+                        return (!oldDev || oldDev.child_id !== d.child_id) && STATE.children?.some(c => c.id === d.child_id);
+                    });
+                    if (newlyPaired || devs.length !== STATE.devices?.length) {
+                        console.log('[PairingManager] Detected new device paired! Refreshing dashboard...');
+                        if (window.App && window.App.loadChildren) {
+                            window.App.loadChildren();
+                        }
+                    }
+                } catch (e) {}
+            } else {
+                clearInterval(this._pollTimer);
+                this._pollTimer = null;
+            }
+        }, 5000);
+    },
+
     syncUnpairedChildren() {
         if (!Array.isArray(STATE.children)) return;
+        let hasUnpaired = false;
         STATE.children.forEach(child => {
             const hasDev = STATE.devices && STATE.devices.some(d => d.child_id === child.id);
             if (!hasDev) {
+                hasUnpaired = true;
                 this.getOrGenerateCode(child.id);
             } else {
                 if (this.codes[child.id]?.timer) {
@@ -118,6 +147,9 @@ window.PairingManager = {
                 }
             }
         });
+        if (hasUnpaired) {
+            this.startPairingPoll();
+        }
         this.renderQuickBar();
         this.renderOverviewHero();
     },

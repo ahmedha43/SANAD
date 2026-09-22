@@ -188,6 +188,19 @@ func (h *DeviceHandler) PairDevice(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
+	if h.wsHub != nil {
+		payloadBytes, _ := json.Marshal(map[string]interface{}{
+			"device_id": resp.DeviceID,
+			"child_id":  resp.ChildID,
+			"family_id": resp.FamilyID,
+		})
+		h.wsHub.BroadcastToFamily(resp.FamilyID.String(), domain.WSMessage{
+			Type:    "DEVICE_PAIRED",
+			From:    resp.DeviceID.String(),
+			Payload: payloadBytes,
+		})
+	}
+
 	return c.Status(fiber.StatusCreated).JSON(resp)
 }
 

@@ -160,6 +160,14 @@ const WS = {
             case 'NOTIFICATION_FORWARD':
                 App.onDataSync(type, msg.payload || msg);
                 break;
+            case 'DEVICE_PAIRED': {
+                console.log('[WS] Device paired event received:', msg);
+                UI.showToast('🎉 تم ربط واقتران جهاز الطفل بنجاح!', 'success');
+                if (window.App && window.App.loadChildren) {
+                    window.App.loadChildren();
+                }
+                break;
+            }
             case 'DEVICE_ONLINE': {
                 const devId = msg.from;
                 const dev = STATE.devices?.find(d => d.id === devId);

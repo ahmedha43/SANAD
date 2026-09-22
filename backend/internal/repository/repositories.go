@@ -91,6 +91,26 @@ func (r *Repository) CreateDevice(ctx context.Context, device *domain.Device) er
 	return r.db.WithContext(ctx).Create(device).Error
 }
 
+func (r *Repository) UpdateDevice(ctx context.Context, device *domain.Device) error {
+	return r.db.WithContext(ctx).Model(&domain.Device{}).
+		Where("id = ?", device.ID).
+		Updates(map[string]interface{}{
+			"child_id":       device.ChildID,
+			"family_id":      device.FamilyID,
+			"device_uid":     device.DeviceUID,
+			"device_name":    device.DeviceName,
+			"model":          device.Model,
+			"os_version":     device.OSVersion,
+			"os_type":        device.OSType,
+			"app_version":    device.AppVersion,
+			"status":         device.Status,
+			"pairing_secret": device.PairingSecret,
+			"fcm_token":      device.FCMToken,
+			"last_seen_at":   device.LastSeenAt,
+			"updated_at":     time.Now(),
+		}).Error
+}
+
 func (r *Repository) GetDeviceByUID(ctx context.Context, uid string) (*domain.Device, error) {
 	var dev domain.Device
 	err := r.db.WithContext(ctx).Preload("Child").Where("device_uid = ?", uid).First(&dev).Error

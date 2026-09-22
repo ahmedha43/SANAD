@@ -101,6 +101,9 @@ func (s *PairingService) PairKidDevice(ctx context.Context, req PairDeviceReques
 		}
 	}
 
+	// Check if device already exists by UID
+	existing, _ := s.repo.GetDeviceByUID(ctx, req.DeviceUID)
+
 	// Check subscription validity & device limit
 	sub, _ := s.repo.GetSubscriptionByFamilyID(ctx, pc.FamilyID)
 	if sub != nil {
@@ -111,9 +114,12 @@ func (s *PairingService) PairKidDevice(ctx context.Context, req PairDeviceReques
 			return nil, errors.New("انتهت صلاحية اشتراك هذه العائلة")
 		}
 
-		devices, _ := s.repo.GetDevicesByFamilyID(ctx, pc.FamilyID)
-		if len(devices) >= sub.MaxDevices {
-			return nil, errors.New("تم الوصول للحد الأقصى لعدد الأجهزة المسموحة في باقة هذه العائلة")
+		// Only enforce device limit for new devices, not when re-pairing an existing device
+		if existing == nil {
+			devices, _ := s.repo.GetDevicesByFamilyID(ctx, pc.FamilyID)
+			if len(devices) >= sub.MaxDevices {
+				return nil, errors.New("تم الوصول للحد الأقصى لعدد الأجهزة المسموحة في باقة هذه العائلة")
+			}
 		}
 	}
 
@@ -122,8 +128,6 @@ func (s *PairingService) PairKidDevice(ctx context.Context, req PairDeviceReques
 		return nil, err
 	}
 
-	// Check if device already exists by UID
-	existing, _ := s.repo.GetDeviceByUID(ctx, req.DeviceUID)
 	var deviceID uuid.UUID
 
 	if existing != nil {
@@ -140,8 +144,8 @@ func (s *PairingService) PairKidDevice(ctx context.Context, req PairDeviceReques
 		existing.Status = domain.StatusOnline
 		now := time.Now()
 		existing.LastSeenAt = &now
-		if err := s.repo.CreateDevice(ctx, existing); err != nil {
-			// Update fallback
+		if err := s.repo.UpdateDevice(ctx, existing); err != nil {
+			return nil, err
 		}
 	} else {
 		deviceID = uuid.New()
