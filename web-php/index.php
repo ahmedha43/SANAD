@@ -34,6 +34,9 @@ require_once __DIR__ . '/includes/sidebar.php';
 
     <!-- SECTION 1: Overview Dashboard (Default) -->
     <div class="content-section active" id="section-overview">
+        <!-- Permanent Auto-Renewing Pairing Hero for Unpaired Children -->
+        <?php require_once __DIR__ . '/views/dashboard/unpaired_hero.php'; ?>
+
         <!-- Quick Stats Cards (Battery, Status, Screen Time, Risks) -->
         <?php require_once __DIR__ . '/views/dashboard/stats_cards.php'; ?>
 

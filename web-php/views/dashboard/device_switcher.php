@@ -24,4 +24,7 @@ declare(strict_types=1);
             <span>جاري تحميل بيانات أجهزة الأطفال...</span>
         </div>
     </div>
+
+    <!-- Dynamic Unpaired Devices Quick Alert Bar -->
+    <div id="unpairedDevicesQuickBar" style="display: none; margin-top: 12px;"></div>
 </section>

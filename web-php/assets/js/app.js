@@ -25,7 +25,260 @@ function escapeHtml(str) {
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
 }
-window.escapeHtml = escapeHtml;
+// ==========================================================================
+// Permanent Auto-Renewing Pairing Manager for Unpaired Children
+// إدارة أكواد الاقتران الدائمة والمتجددة تلقائياً
+// ==========================================================================
+window.PairingManager = {
+    codes: {},   // { [childId]: { code, familyId, expiresAt, remainingSeconds, timer } }
+    loading: {}, // { [childId]: boolean }
+
+    async getOrGenerateCode(childId, force = false) {
+        if (!childId) return null;
+        const entry = this.codes[childId];
+        const now = Date.now();
+
+        // If code exists, not forced, and has > 30s remaining, return cached
+        if (entry && !force && entry.expiresAt > now + 30000) {
+            return entry.code;
+        }
+
+        if (this.loading[childId]) return entry?.code || null;
+        this.loading[childId] = true;
+
+        try {
+            const res = await API.generatePairCode(childId);
+            const data = res.data || res;
+            const code = String(data.code || '000000');
+            const familyId = data.family_id || '';
+            const validitySec = data.expires_in_seconds || (15 * 60);
+
+            if (entry && entry.timer) {
+                clearInterval(entry.timer);
+            }
+
+            const expiresAt = Date.now() + (validitySec * 1000);
+            const newEntry = {
+                code: code,
+                familyId: familyId,
+                expiresAt: expiresAt,
+                remainingSeconds: validitySec,
+                timer: null
+            };
+
+            // Setup auto-renew timer
+            newEntry.timer = setInterval(() => {
+                const curLeft = Math.max(0, Math.floor((newEntry.expiresAt - Date.now()) / 1000));
+                newEntry.remainingSeconds = curLeft;
+
+                // Auto-refresh when <= 30 seconds remaining to ensure it NEVER expires
+                if (curLeft <= 30) {
+                    clearInterval(newEntry.timer);
+                    newEntry.timer = null;
+                    console.log(`[PairingManager] Auto-renewing pair code for child ${childId}...`);
+                    window.PairingManager.getOrGenerateCode(childId, true);
+                    return;
+                }
+
+                // If active child is this child, update countdown in hero
+                if (STATE.activeChildId === childId) {
+                    const heroCountdown = document.getElementById('unpairedHeroCountdown');
+                    if (heroCountdown) {
+                        const m = String(Math.floor(curLeft / 60)).padStart(2, '0');
+                        const s = String(curLeft % 60).padStart(2, '0');
+                        heroCountdown.textContent = `${m}:${s}`;
+                    }
+                }
+            }, 1000);
+
+            this.codes[childId] = newEntry;
+
+            // Re-render UI elements
+            this.updateAllUI(childId);
+
+            return code;
+        } catch (err) {
+            console.error(`[PairingManager] Failed to generate pair code for child ${childId}:`, err);
+            return null;
+        } finally {
+            this.loading[childId] = false;
+        }
+    },
+
+    syncUnpairedChildren() {
+        if (!Array.isArray(STATE.children)) return;
+        STATE.children.forEach(child => {
+            const hasDev = STATE.devices && STATE.devices.some(d => d.child_id === child.id);
+            if (!hasDev) {
+                this.getOrGenerateCode(child.id);
+            } else {
+                if (this.codes[child.id]?.timer) {
+                    clearInterval(this.codes[child.id].timer);
+                    delete this.codes[child.id];
+                }
+            }
+        });
+        this.renderQuickBar();
+        this.renderOverviewHero();
+    },
+
+    updateAllUI(childId) {
+        if (typeof App !== 'undefined' && App.renderChildrenCards) {
+            App.renderChildrenCards();
+        }
+        this.renderQuickBar();
+        if (!childId || STATE.activeChildId === childId) {
+            this.renderOverviewHero();
+        }
+    },
+
+    renderOverviewHero() {
+        const hero = document.getElementById('overviewUnpairedHero');
+        if (!hero) return;
+
+        const child = STATE.children?.find(c => c.id === STATE.activeChildId);
+        const hasDev = STATE.devices?.some(d => d.child_id === STATE.activeChildId);
+
+        // If no child or child has a paired device, hide hero
+        if (!child || hasDev) {
+            hero.style.display = 'none';
+            return;
+        }
+
+        hero.style.display = 'block';
+
+        const nameEl = document.getElementById('unpairedChildName');
+        if (nameEl) nameEl.textContent = child.name;
+
+        const entry = this.codes[child.id];
+        const digitsWrapper = document.getElementById('unpairedDigitsWrapper');
+        const countdownEl = document.getElementById('unpairedHeroCountdown');
+        const qrContainer = document.getElementById('unpairedHeroQrCode');
+
+        if (entry && entry.code) {
+            const codeStr = String(entry.code).padStart(6, '0');
+            if (digitsWrapper) {
+                digitsWrapper.innerHTML = codeStr.split('').map(d => `<span class="unpaired-digit-box">${d}</span>`).join('');
+            }
+            if (countdownEl) {
+                const curLeft = Math.max(0, Math.floor((entry.expiresAt - Date.now()) / 1000));
+                const m = String(Math.floor(curLeft / 60)).padStart(2, '0');
+                const s = String(curLeft % 60).padStart(2, '0');
+                countdownEl.textContent = `${m}:${s}`;
+            }
+
+            if (qrContainer && typeof QRCode !== 'undefined') {
+                qrContainer.innerHTML = '';
+                const qrPayload = JSON.stringify({
+                    code: entry.code,
+                    family_id: entry.familyId,
+                    child_id: child.id,
+                    server_url: window.APP_CONFIG?.wsBase?.replace('/ws', '') || window.location.origin
+                });
+                new QRCode(qrContainer, {
+                    text: qrPayload,
+                    width: 140,
+                    height: 140,
+                    colorDark: "#0f172a",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+            }
+        } else {
+            if (digitsWrapper) {
+                digitsWrapper.innerHTML = `<span class="unpaired-digit-box"><i class="fa-solid fa-circle-notch fa-spin" style="font-size: 1.2rem;"></i></span>`;
+            }
+            this.getOrGenerateCode(child.id);
+        }
+    },
+
+    renderQuickBar() {
+        const bar = document.getElementById('unpairedDevicesQuickBar');
+        if (!bar) return;
+
+        if (!STATE.children || STATE.children.length === 0) {
+            bar.style.display = 'none';
+            return;
+        }
+
+        const unpaired = STATE.children.filter(child => {
+            return !STATE.devices || !STATE.devices.some(d => d.child_id === child.id);
+        });
+
+        if (unpaired.length === 0) {
+            bar.style.display = 'none';
+            bar.innerHTML = '';
+            return;
+        }
+
+        bar.style.display = 'block';
+        bar.innerHTML = `
+            <div class="unpaired-alert-ribbon">
+                <div class="unpaired-ribbon-left">
+                    <i class="fa-solid fa-triangle-exclamation ribbon-icon"></i>
+                    <span class="ribbon-title">أجهزة بانتظار الاقتران:</span>
+                    <div class="ribbon-chips">
+                        ${unpaired.map(child => {
+                            const entry = this.codes[child.id];
+                            const code = entry?.code ? entry.code : '...';
+                            return `
+                                <div class="ribbon-child-chip" onclick="App.selectChild('${child.id}', '')" title="انقر لعرض تفاصيل الاقتران">
+                                    <span class="ribbon-name">${escapeHtml(child.name)}</span>
+                                    <span class="ribbon-code"><i class="fa-solid fa-key"></i> ${code}</span>
+                                    <button class="btn-copy-chip" onclick="event.stopPropagation(); window.copySpecificCode('${code}')" title="نسخ الكود">
+                                        <i class="fa-regular fa-copy"></i>
+                                    </button>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+                <div class="ribbon-hint">
+                    <i class="fa-solid fa-circle-info"></i> أدخل الكود في تطبيق سَنَد على هاتف أو كمبيوتر الطفل للربط الفوري.
+                </div>
+            </div>
+        `;
+    }
+};
+
+window.copyActiveUnpairedCode = function() {
+    const childId = STATE.activeChildId;
+    const entry = window.PairingManager?.codes[childId];
+    if (entry && entry.code) {
+        navigator.clipboard.writeText(entry.code).then(() => {
+            UI.showToast(`تم نسخ رمز الاقتران (${entry.code}) إلى الحافظة`, 'success');
+        }).catch(() => {
+            UI.showToast(`كود الاقتران: ${entry.code}`, 'info');
+        });
+    } else {
+        UI.showToast('جاري استخراج رمز الاقتران...', 'warning');
+    }
+};
+
+window.renewActiveUnpairedCode = async function() {
+    const childId = STATE.activeChildId;
+    if (!childId) return;
+    const icon = document.getElementById('unpairedRenewIcon');
+    if (icon) icon.classList.add('fa-spin');
+    try {
+        UI.showToast('جاري تجديد كود الاقتران...', 'info');
+        await window.PairingManager.getOrGenerateCode(childId, true);
+        UI.showToast('تم تجديد كود الاقتران بنجاح', 'success');
+    } catch (e) {
+        UI.showToast('تعذر تجديد الكود: ' + e.message, 'error');
+    } finally {
+        if (icon) icon.classList.remove('fa-spin');
+    }
+};
+
+window.copySpecificCode = function(code) {
+    if (!code || code === '...') return;
+    navigator.clipboard.writeText(code).then(() => {
+        UI.showToast(`تم نسخ الرمز (${code}) بنجاح`, 'success');
+    }).catch(() => {
+        UI.showToast(`الرمز: ${code}`, 'info');
+    });
+};
 
 const App = {
     async init() {
@@ -113,10 +366,19 @@ const App = {
                             GeofenceMapController.updateKidLocation(dev.last_location.latitude, dev.last_location.longitude);
                         }
                     }
+                } else {
+                    STATE.activeDeviceId = '';
+                    localStorage.setItem('active_child_id', first.id);
+                    localStorage.removeItem('active_device_id');
                 }
             }
 
             this.updateActiveDeviceUI();
+
+            // Auto-sync pairing codes for all unpaired children
+            if (window.PairingManager) {
+                window.PairingManager.syncUnpairedChildren();
+            }
         } catch (err) {
             console.error('Failed to load children:', err);
             if (err.message.includes('401') || err.message.includes('Unauthorized')) {
@@ -148,19 +410,23 @@ const App = {
             const isWindows = dev?.os_type === 'windows' ||
                               (dev?.model && dev.model.toLowerCase().includes('windows')) ||
                               (dev?.os_version && dev.os_version.toLowerCase().includes('windows'));
-            const deviceIcon = dev ? (isWindows ? 'fa-laptop' : 'fa-mobile-screen-button') : 'fa-clock';
+            const deviceIcon = dev ? (isWindows ? 'fa-laptop' : 'fa-mobile-screen-button') : 'fa-qrcode';
+
+            const pairEntry = window.PairingManager ? window.PairingManager.codes[child.id] : null;
+            const pairCodeBadge = (!dev && pairEntry?.code) ? 
+                `<span class="pairing-code-tag" title="كود الاقتران الدائم"><i class="fa-solid fa-key"></i> <span class="code-val">${pairEntry.code}</span></span>` : '';
 
             return `
-                <div class="child-card ${isSelected ? 'active' : ''}" onclick="App.selectChild('${child.id}', '${dev ? dev.id : ''}')">
+                <div class="child-card ${isSelected ? 'active' : ''} ${!dev ? 'unpaired-child-chip' : ''}" onclick="App.selectChild('${child.id}', '${dev ? dev.id : ''}')">
                     <div class="child-avatar">
                         <i class="fa-solid ${deviceIcon}"></i>
                     </div>
                     <div class="child-info">
-                        <div class="child-name">${escapeHtml(child.name)}</div>
+                        <div class="child-name">${escapeHtml(child.name)} ${pairCodeBadge}</div>
                         <div class="child-model">${escapeHtml(model)}</div>
                         <div class="child-meta">
                             ${dev ? `<span class="child-battery"><i class="fa-solid fa-battery-half"></i> ${battery}%</span>` : ''}
-                            <span class="child-status ${isOnline ? 'online' : ''}">${dev ? (isOnline ? 'متصل' : 'غير متصل') : '⏳ لم يُربط جهاز'}</span>
+                            <span class="child-status ${isOnline ? 'online' : ''}">${dev ? (isOnline ? 'متصل' : 'غير متصل') : '⏳ بانتظار الاقتران'}</span>
                         </div>
                     </div>
                     <button class="child-delete-btn" onclick="event.stopPropagation(); ${dev ? `openDeleteDeviceModal('${dev.id}', '${escapeHtml(child.name)}', '${escapeHtml(model)}', '${child.id}')` : `openDeleteChildModal('${child.id}', '${escapeHtml(child.name)}')`}" title="${dev ? 'حذف هذا الجهاز وفك كافة القيود' : 'حذف ملف هذا الطفل'}">
@@ -173,9 +439,13 @@ const App = {
 
     selectChild(childId, deviceId) {
         STATE.activeChildId = childId;
-        STATE.activeDeviceId = deviceId;
+        STATE.activeDeviceId = deviceId || '';
         localStorage.setItem('active_child_id', childId);
-        localStorage.setItem('active_device_id', deviceId);
+        if (deviceId) {
+            localStorage.setItem('active_device_id', deviceId);
+        } else {
+            localStorage.removeItem('active_device_id');
+        }
 
         const dev = STATE.devices.find(d => d.id === deviceId);
         if (dev && dev.last_location && dev.last_location.latitude) {
@@ -187,7 +457,9 @@ const App = {
 
         this.renderChildrenCards();
         this.updateActiveDeviceUI();
-        this.loadAllActiveDeviceData();
+        if (deviceId) {
+            this.loadAllActiveDeviceData();
+        }
         UI.showToast('تم التبديل إلى جهاز الطفل المحدد', 'info');
     },
 
@@ -196,7 +468,7 @@ const App = {
         const dev = STATE.devices.find(d => d.id === STATE.activeDeviceId);
 
         const childName = child ? child.name : 'جهاز الطفل';
-        const modelName = dev ? dev.model : 'Android Device';
+        const modelName = dev ? dev.model : (child ? 'بانتظار الاقتران' : 'Android Device');
 
         document.getElementById('sideChildName').textContent = childName;
         document.getElementById('sideModelName').textContent = modelName;
@@ -209,6 +481,11 @@ const App = {
             }
         } else {
             UI.updateDeviceOnlineStatus(false, null);
+        }
+
+        // Render / refresh unpaired hero card
+        if (window.PairingManager) {
+            window.PairingManager.renderOverviewHero();
         }
     },
 

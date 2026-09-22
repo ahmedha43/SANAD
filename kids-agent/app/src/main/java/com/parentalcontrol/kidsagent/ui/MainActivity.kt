@@ -105,7 +105,8 @@ class MainActivity : AppCompatActivity() {
             // Pairing Inputs
             val serverInput = EditText(this).apply {
                 hint = "Backend Server URL"
-                setText("http://192.168.1.110:8080")
+                val savedUrl = KidsAgentApp.instance.prefs.getString(KidsAgentApp.KEY_SERVER_URL, null)
+                setText(if (!savedUrl.isNullOrBlank()) savedUrl else "http://192.168.1.110:8080")
                 setTextColor(Color.WHITE)
                 setHintTextColor(0xFF94A3B8.toInt())
                 setBackgroundColor(0xFF1E293B.toInt())
@@ -206,6 +207,65 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             root.addView(syncButton)
+
+            // Re-Pair / Change Pairing Section
+            val serverUrl = KidsAgentApp.instance.prefs.getString(KidsAgentApp.KEY_SERVER_URL, "") ?: ""
+            val deviceId = KidsAgentApp.instance.prefs.getString(KidsAgentApp.KEY_DEVICE_ID, "") ?: ""
+
+            val infoCard = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setBackgroundColor(0xFF1E293B.toInt())
+                setPadding(30, 24, 30, 24)
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { topMargin = 30; bottomMargin = 16 }
+            }
+
+            val infoTitle = TextView(this).apply {
+                text = "معلومات الاتصال والاقتران الحالي"
+                textSize = 14f
+                setTypeface(null, Typeface.BOLD)
+                setTextColor(0xFF38BDF8.toInt())
+            }
+            infoCard.addView(infoTitle)
+
+            val infoDetails = TextView(this).apply {
+                text = "السيرفر: $serverUrl\nمعرف الجهاز: ${if (deviceId.length > 8) deviceId.substring(0, 8) + "..." else deviceId}"
+                textSize = 12f
+                setTextColor(0xFF94A3B8.toInt())
+                setPadding(0, 8, 0, 0)
+            }
+            infoCard.addView(infoDetails)
+            root.addView(infoCard)
+
+            val unpairButton = Button(this).apply {
+                text = "🔄 تغيير الاقتران / ربط بكود جديد (Re-Pair)"
+                setBackgroundColor(0xFF475569.toInt())
+                setTextColor(Color.WHITE)
+                setTypeface(null, Typeface.BOLD)
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { bottomMargin = 40 }
+                setOnClickListener {
+                    androidx.appcompat.app.AlertDialog.Builder(this@MainActivity)
+                        .setTitle("تغيير الاقتران / فك الارتباط")
+                        .setMessage("هل أنت متأكد من رغبتك في فك اقتران هذا الجهاز؟ سيتيح لك هذا إدخال كود اقتران جديد وربطه بحساب أو طفل مختلف.")
+                        .setPositiveButton("نعم، فك الاقتران") { _, _ ->
+                            try {
+                                val svcIntent = Intent(this@MainActivity, ForegroundSyncService::class.java)
+                                stopService(svcIntent)
+                            } catch (_: Throwable) {}
+                            KidsAgentApp.instance.clearPairing()
+                            Toast.makeText(this@MainActivity, "تم فك الاقتران بنجاح. يمكنك الآن إدخال كود جديد.", Toast.LENGTH_LONG).show()
+                            renderUI()
+                        }
+                        .setNegativeButton("إلغاء", null)
+                        .show()
+                }
+            }
+            root.addView(unpairButton)
         }
 
         setContentView(scrollView)

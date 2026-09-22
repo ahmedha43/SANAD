@@ -93,6 +93,10 @@ class KidsAgentApp : Application() {
     }
 
     fun clearPairing() {
+        val serverUrl = prefs.getString(KEY_SERVER_URL, null)
         prefs.edit().clear().apply()
+        if (!serverUrl.isNullOrBlank()) {
+            prefs.edit().putString(KEY_SERVER_URL, serverUrl).apply()
+        }
     }
 }
