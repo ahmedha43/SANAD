@@ -1,5 +1,6 @@
 package com.parentalcontrol.kidsagent.service
 
+import android.Manifest
 import android.app.Notification
 import android.app.PendingIntent
 import android.app.Service
@@ -18,6 +19,7 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.google.gson.Gson
 import com.parentalcontrol.kidsagent.KidsAgentApp
 import com.parentalcontrol.kidsagent.R
@@ -162,15 +164,20 @@ class ForegroundSyncService : Service() {
         }
 
         fun start(context: Context) {
-            val intent = Intent(context, ForegroundSyncService::class.java)
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                context.startForegroundService(intent)
-            } else {
-                context.startService(intent)
+            try {
+                val intent = Intent(context, ForegroundSyncService::class.java)
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    context.startForegroundService(intent)
+                } else {
+                    context.startService(intent)
+                }
+            } catch (e: Throwable) {
+                Log.e("ForegroundSyncService", "Failed to start ForegroundSyncService: ${e.message}", e)
             }
         }
 
         fun onScreenCapturePermissionGranted(intent: Intent) {
+            instance?.ensureMediaProjectionForegroundType()
             instance?.webRTCManager?.startScreenCaptureWithIntent(intent)
         }
 
@@ -256,17 +263,75 @@ class ForegroundSyncService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             try {
                 val notification = buildForegroundNotification()
-                var serviceType = ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    serviceType = serviceType or ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA or ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
-                }
+                var serviceType = 0
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                    serviceType = serviceType or ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+                    serviceType = serviceType or ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+                    if (com.parentalcontrol.kidsagent.webrtc.MediaProjectionHolder.isGranted) {
+                        serviceType = serviceType or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+                    }
                 }
-                startForeground(NOTIFICATION_ID, notification, serviceType)
-                Log.i(TAG, "Promoted ForegroundService to MEDIA_PROJECTION type")
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to promote foreground service to media projection: ${e.message}")
+                val hasFine = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                val hasCoarse = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                if (hasFine || hasCoarse) {
+                    serviceType = serviceType or ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                        serviceType = serviceType or ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA
+                    }
+                    if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                        serviceType = serviceType or ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+                    }
+                }
+                if (serviceType != 0) {
+                    startForeground(NOTIFICATION_ID, notification, serviceType)
+                    Log.i(TAG, "Promoted ForegroundService to active types: $serviceType")
+                } else {
+                    startForeground(NOTIFICATION_ID, notification)
+                }
+            } catch (e: Throwable) {
+                Log.e(TAG, "Failed to promote foreground service types: ${e.message}")
+            }
+        }
+    }
+
+    private fun startForegroundSafely() {
+        val notification = buildForegroundNotification()
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                var serviceType = 0
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    serviceType = serviceType or ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+                }
+                val hasFine = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                val hasCoarse = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                if (hasFine || hasCoarse) {
+                    serviceType = serviceType or ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                        serviceType = serviceType or ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA
+                    }
+                    if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                        serviceType = serviceType or ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+                    }
+                }
+
+                if (serviceType != 0) {
+                    startForeground(NOTIFICATION_ID, notification, serviceType)
+                    Log.i(TAG, "Started ForegroundService safely with types: $serviceType")
+                } else {
+                    startForeground(NOTIFICATION_ID, notification)
+                }
+            } else {
+                startForeground(NOTIFICATION_ID, notification)
+            }
+        } catch (e: Throwable) {
+            Log.e(TAG, "startForeground with types failed: ${e.message}", e)
+            try {
+                startForeground(NOTIFICATION_ID, notification)
+            } catch (fatal: Throwable) {
+                Log.e(TAG, "Critical startForeground fallback failed: ${fatal.message}", fatal)
             }
         }
     }
@@ -295,51 +360,78 @@ class ForegroundSyncService : Service() {
         isServiceRunning = true
         Log.d(TAG, "ForegroundSyncService onCreate")
 
-        val notification = buildForegroundNotification()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            var serviceType = ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                serviceType = serviceType or ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA or ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                serviceType = serviceType or ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
-            }
-            startForeground(NOTIFICATION_ID, notification, serviceType)
-        } else {
-            startForeground(NOTIFICATION_ID, notification)
+        startForegroundSafely()
+
+        try {
+            appDb = AppDatabase.getInstance(this)
+            usageTracker = UsageTracker(this)
+            deviceDataHelper = DeviceDataHelper(this)
+            loadPersistedScreenTimeRule()
+            loadBlockedPackages(this)
+            loadMonitoringState(this)
+            loadWebFilterRules(this)
+            val safetyPrefs = getSharedPreferences("kids_agent_safety", Context.MODE_PRIVATE)
+            val savedSafe = safetyPrefs.getStringSet("safe_risk_patterns", emptySet()) ?: emptySet()
+            com.parentalcontrol.kidsagent.safety.RiskDetector.setSafePatterns(savedSafe)
+            Log.i(TAG, "Loaded ${savedSafe.size} persisted safe patterns into RiskDetector")
+        } catch (e: Throwable) {
+            Log.e(TAG, "Error initializing local database or preferences: ${e.message}", e)
         }
 
-        ensureMediaProjectionForegroundType()
+        try {
+            syncBlockedPackagesFromServer()
+        } catch (e: Throwable) {
+            Log.e(TAG, "Error syncing blocked packages: ${e.message}", e)
+        }
 
-        appDb = AppDatabase.getInstance(this)
-        usageTracker = UsageTracker(this)
-        deviceDataHelper = DeviceDataHelper(this)
-        loadPersistedScreenTimeRule()
-        loadBlockedPackages(this)
-        loadMonitoringState(this)
-        loadWebFilterRules(this)
-        val safetyPrefs = getSharedPreferences("kids_agent_safety", Context.MODE_PRIVATE)
-        val savedSafe = safetyPrefs.getStringSet("safe_risk_patterns", emptySet()) ?: emptySet()
-        com.parentalcontrol.kidsagent.safety.RiskDetector.setSafePatterns(savedSafe)
-        Log.i(TAG, "Loaded ${savedSafe.size} persisted safe patterns into RiskDetector")
-        syncBlockedPackagesFromServer()
-        initWebSocket()
-        initLocation()
-        initWebRTC()
-        registerNetworkCallback()
+        try {
+            initWebSocket()
+        } catch (e: Throwable) {
+            Log.e(TAG, "Error initializing WebSocket: ${e.message}", e)
+        }
+
+        try {
+            initLocation()
+        } catch (e: Throwable) {
+            Log.e(TAG, "Error initializing Location: ${e.message}", e)
+        }
+
+        try {
+            initWebRTC()
+        } catch (e: Throwable) {
+            Log.e(TAG, "Error initializing WebRTC: ${e.message}", e)
+        }
+
+        try {
+            registerNetworkCallback()
+        } catch (e: Throwable) {
+            Log.e(TAG, "Error registering network callback: ${e.message}", e)
+        }
 
         // 1. Enterprise Anti-Tamper & Device Owner
-        DeviceOwnerManager.applyEnterpriseRestrictions(this)
+        try {
+            DeviceOwnerManager.applyEnterpriseRestrictions(this)
+        } catch (e: Throwable) {
+            Log.e(TAG, "Error applying enterprise restrictions: ${e.message}", e)
+        }
 
         // 2. SIM Card and Airplane Mode Watcher
-        simWatcher = SimAndAirplaneWatcher(this)
-        simWatcher?.startWatching()
+        try {
+            simWatcher = SimAndAirplaneWatcher(this)
+            simWatcher?.startWatching()
+        } catch (e: Throwable) {
+            Log.e(TAG, "Error starting SIM watcher: ${e.message}", e)
+        }
 
-        OfflineSyncWorker.schedulePeriodic(this)
-        OfflineSyncWorker.enqueue(this) // Flush any existing offline records
-        schedulePeriodicUsageSync()
-        schedulePeriodicContentSync()
-        scheduleScreenTimeAndBedtimeMonitor()
+        try {
+            OfflineSyncWorker.schedulePeriodic(this)
+            OfflineSyncWorker.enqueue(this) // Flush any existing offline records
+            schedulePeriodicUsageSync()
+            schedulePeriodicContentSync()
+            scheduleScreenTimeAndBedtimeMonitor()
+        } catch (e: Throwable) {
+            Log.e(TAG, "Error scheduling workers: ${e.message}", e)
+        }
     }
 
     fun sendWsMessage(type: String, payload: Any): Boolean {
@@ -441,8 +533,12 @@ class ForegroundSyncService : Service() {
 
 
     private fun initWebRTC() {
-        webRTCManager = WebRTCStreamManager(this) { signalingType, payload ->
-            wsClient?.sendMessage(signalingType, payload)
+        try {
+            webRTCManager = WebRTCStreamManager(this) { signalingType, payload ->
+                wsClient?.sendMessage(signalingType, payload)
+            }
+        } catch (t: Throwable) {
+            Log.e(TAG, "WebRTCStreamManager init failed gracefully: ${t.message}", t)
         }
     }
 

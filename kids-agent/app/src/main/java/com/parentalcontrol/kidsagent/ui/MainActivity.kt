@@ -46,15 +46,23 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        renderUI()
-        requestRuntimePermissionsIfNeeded()
+        try {
+            renderUI()
+            requestRuntimePermissionsIfNeeded()
+        } catch (e: Throwable) {
+            android.util.Log.e("MainActivity", "Error in onCreate: ${e.message}", e)
+        }
     }
 
     override fun onResume() {
         super.onResume()
-        refreshPermissionCards()
-        if (KidsAgentApp.instance.isPaired()) {
-            ForegroundSyncService.start(this)
+        try {
+            refreshPermissionCards()
+            if (KidsAgentApp.instance.isPaired()) {
+                ForegroundSyncService.start(this)
+            }
+        } catch (e: Throwable) {
+            android.util.Log.e("MainActivity", "Error in onResume: ${e.message}", e)
         }
     }
 
@@ -537,17 +545,31 @@ class MainActivity : AppCompatActivity() {
 
                 if (response.isSuccessful) {
                     val respMap = gson.fromJson(respBody, Map::class.java)
-                    val deviceId = respMap["device_id"] as String
-                    val familyId = respMap["family_id"] as String
-                    val childId = respMap["child_id"] as String
-                    val secret = respMap["pairing_secret"] as String
+                    val deviceId = respMap["device_id"]?.toString() ?: ""
+                    val familyId = respMap["family_id"]?.toString() ?: ""
+                    val childId = respMap["child_id"]?.toString() ?: ""
+                    val secret = respMap["pairing_secret"]?.toString() ?: ""
 
-                    KidsAgentApp.instance.savePairing(deviceId, familyId, childId, secret, serverUrl)
+                    if (deviceId.isNotEmpty() && secret.isNotEmpty()) {
+                        KidsAgentApp.instance.savePairing(deviceId, familyId, childId, secret, serverUrl)
 
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(this@MainActivity, "Device paired successfully!", Toast.LENGTH_LONG).show()
-                        ForegroundSyncService.start(this@MainActivity)
-                        renderUI()
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@MainActivity, "Device paired successfully!", Toast.LENGTH_LONG).show()
+                            try {
+                                ForegroundSyncService.start(this@MainActivity)
+                            } catch (e: Throwable) {
+                                android.util.Log.e("MainActivity", "Failed to start service: ${e.message}")
+                            }
+                            try {
+                                renderUI()
+                            } catch (e: Throwable) {
+                                android.util.Log.e("MainActivity", "Failed to renderUI: ${e.message}")
+                            }
+                        }
+                    } else {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@MainActivity, "Invalid pairing response from server", Toast.LENGTH_LONG).show()
+                        }
                     }
                 } else {
                     withContext(Dispatchers.Main) {
