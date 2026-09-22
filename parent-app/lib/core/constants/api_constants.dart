@@ -1,6 +1,6 @@
 class ApiConstants {
-  static const String defaultBaseUrl = 'http://192.168.1.106:8080';
-  static const String defaultWsUrl = 'ws://192.168.1.106:8080';
+  static const String defaultBaseUrl = 'http://192.168.1.110:8080';
+  static const String defaultWsUrl = 'ws://192.168.1.110:8080';
 
   static String baseUrl = defaultBaseUrl;
   static String wsUrl = defaultWsUrl;

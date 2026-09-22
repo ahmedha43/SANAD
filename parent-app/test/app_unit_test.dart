@@ -7,10 +7,10 @@ import 'package:parent_app/core/theme/app_theme.dart';
 void main() {
   group('Parent App Core Tests', () {
     test('ApiConstants builds correct endpoints for LAN IP', () {
-      ApiConstants.baseUrl = 'http://192.168.1.106:8080';
-      expect(ApiConstants.loginUrl, 'http://192.168.1.106:8080/api/v1/auth/login');
-      expect(ApiConstants.pairCodeUrl('child-123'), 'http://192.168.1.106:8080/api/v1/devices/children/child-123/pair-code');
-      expect(ApiConstants.commandUrl('dev-456'), 'http://192.168.1.106:8080/api/v1/devices/dev-456/command');
+      ApiConstants.baseUrl = 'http://192.168.1.110:8080';
+      expect(ApiConstants.loginUrl, 'http://192.168.1.110:8080/api/v1/auth/login');
+      expect(ApiConstants.pairCodeUrl('child-123'), 'http://192.168.1.110:8080/api/v1/devices/children/child-123/pair-code');
+      expect(ApiConstants.commandUrl('dev-456'), 'http://192.168.1.110:8080/api/v1/devices/dev-456/command');
     });
 
     test('AppTheme loads darkTheme without errors', () {

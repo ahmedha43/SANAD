@@ -45,17 +45,17 @@ namespace Sanad.Core.Services
                     iceServers = new List<RTCIceServer>
                     {
                         new RTCIceServer { urls = "stun:stun.l.google.com:19302" },
-                        new RTCIceServer { urls = "stun:192.168.1.106:3478" },
+                        new RTCIceServer { urls = "stun:192.168.1.110:3478" },
                         // TURN via host LAN IP
                         new RTCIceServer
                         {
-                            urls = "turn:192.168.1.106:3478",
+                            urls = "turn:192.168.1.110:3478",
                             username = "parentalctl",
                             credential = "SecureTurnSecretPass2026"
                         },
                         new RTCIceServer
                         {
-                            urls = "turns:192.168.1.106:5349",
+                            urls = "turns:192.168.1.110:5349",
                             username = "parentalctl",
                             credential = "SecureTurnSecretPass2026"
                         }

@@ -22,7 +22,7 @@ namespace Sanad.Core.Services
 
         public static string CleanUrl(string? url)
         {
-            if (string.IsNullOrWhiteSpace(url)) return "http://192.168.1.106:8080";
+            if (string.IsNullOrWhiteSpace(url)) return "http://192.168.1.110:8080";
 
             var sb = new System.Text.StringBuilder();
             foreach (char c in url.Trim())

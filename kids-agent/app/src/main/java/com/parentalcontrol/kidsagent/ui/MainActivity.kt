@@ -97,7 +97,7 @@ class MainActivity : AppCompatActivity() {
             // Pairing Inputs
             val serverInput = EditText(this).apply {
                 hint = "Backend Server URL"
-                setText("http://192.168.1.106:8080")
+                setText("http://192.168.1.110:8080")
                 setTextColor(Color.WHITE)
                 setHintTextColor(0xFF94A3B8.toInt())
                 setBackgroundColor(0xFF1E293B.toInt())

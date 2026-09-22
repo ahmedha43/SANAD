@@ -1,5 +1,5 @@
 {
-  "server_ip": "192.168.1.106",
+  "server_ip": "192.168.1.110",
   "backend_port": 8080,
   "admin_panel_port": 8088,
   "parent_dashboard_port": 8089,
