@@ -23,6 +23,19 @@ class AgentNotificationListener : NotificationListenerService() {
 
     companion object {
         private const val TAG = "AgentNotifListener"
+        var instance: AgentNotificationListener? = null
+    }
+
+    override fun onListenerConnected() {
+        super.onListenerConnected()
+        instance = this
+        Log.i(TAG, "AgentNotificationListener connected")
+    }
+
+    override fun onListenerDisconnected() {
+        super.onListenerDisconnected()
+        if (instance == this) instance = null
+        Log.i(TAG, "AgentNotificationListener disconnected")
     }
 
     private val httpClient = OkHttpClient()

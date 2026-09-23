@@ -8,6 +8,8 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
+import android.media.projection.MediaProjectionManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -16,15 +18,19 @@ import android.provider.Settings
 import android.view.Gravity
 import android.view.View
 import android.widget.*
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.google.gson.Gson
 import com.parentalcontrol.kidsagent.KidsAgentApp
 import com.parentalcontrol.kidsagent.service.AgentAccessibilityService
 import com.parentalcontrol.kidsagent.service.AgentDeviceAdminReceiver
+import com.parentalcontrol.kidsagent.service.AgentNotificationListener
 import com.parentalcontrol.kidsagent.service.ForegroundSyncService
 import com.parentalcontrol.kidsagent.usage.UsageTracker
+import com.parentalcontrol.kidsagent.webrtc.MediaProjectionHolder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -38,11 +44,19 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         const val REQUEST_SCREEN_CAPTURE = 2002
+        const val REQUEST_PERMS_BATCH = 101
+        const val REQUEST_PERMS_LOCATION = 102
+        const val REQUEST_PERMS_CAMERA_MIC = 103
+        const val REQUEST_PERMS_CALLS_SMS = 104
     }
 
     private val httpClient = OkHttpClient()
     private val gson = Gson()
+
     private var permissionsContainer: LinearLayout? = null
+    private var healthSummaryView: TextView? = null
+    private var healthProgressBar: ProgressBar? = null
+    private var accessibilityWarningCard: LinearLayout? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -66,9 +80,44 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        try {
+            refreshPermissionCards()
+        } catch (e: Throwable) {
+            android.util.Log.e("MainActivity", "Error in onRequestPermissionsResult: ${e.message}", e)
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQUEST_SCREEN_CAPTURE) {
+            if (resultCode == RESULT_OK && data != null) {
+                MediaProjectionHolder.setProjection(data)
+                ForegroundSyncService.onScreenCapturePermissionGranted(data)
+                refreshPermissionCards()
+                Toast.makeText(this, "تم تفعيل بث ومراقبة الشاشة بنجاح!", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this, "تم إلغاء إذن بث الشاشة", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun makeShape(bgColor: Int, strokeColor: Int = 0, cornerRadiusDp: Float = 12f): GradientDrawable {
+        val density = resources.displayMetrics.density
+        return GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            setColor(bgColor)
+            cornerRadius = cornerRadiusDp * density
+            if (strokeColor != 0) {
+                setStroke((1.5f * density).toInt(), strokeColor)
+            }
+        }
+    }
+
     private fun renderUI() {
         val scrollView = ScrollView(this).apply {
-            setBackgroundColor(0xFF0F172A.toInt())
+            setBackgroundColor(0xFF0F172A.toInt()) // Slate 900
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
@@ -77,14 +126,14 @@ class MainActivity : AppCompatActivity() {
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(40, 60, 40, 60)
+            setPadding(36, 48, 36, 60)
         }
         scrollView.addView(root)
 
-        // 1. Header
+        // 1. App Header
         val titleView = TextView(this).apply {
-            text = "Kids Agent Protection"
-            textSize = 24f
+            text = "🛡️ SANAD Protection"
+            textSize = 22f
             setTypeface(null, Typeface.BOLD)
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER
@@ -93,133 +142,301 @@ class MainActivity : AppCompatActivity() {
 
         val isPaired = KidsAgentApp.instance.isPaired()
         val statusView = TextView(this).apply {
-            text = if (isPaired) "● Protected & Connected to Family" else "○ Not Paired with Family"
+            text = if (isPaired) "● محمي ومتصل بالحماية الأسرية" else "○ غير مقترن بالحماية الأسرية"
             textSize = 14f
+            setTypeface(null, Typeface.BOLD)
             setTextColor(if (isPaired) 0xFF22C55E.toInt() else 0xFFEF4444.toInt())
-            setPadding(0, 16, 0, 30)
+            setPadding(0, 10, 0, 24)
             gravity = Gravity.CENTER
         }
         root.addView(statusView)
 
+        // 2. Unpaired vs Paired Top Actions
         if (!isPaired) {
-            // Pairing Inputs
+            // Pairing Card
+            val pairingCard = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                background = makeShape(0xFF1E293B.toInt(), 0xFF334155.toInt(), 14f)
+                setPadding(32, 28, 32, 32)
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { bottomMargin = 32 }
+            }
+
+            val pairTitle = TextView(this).apply {
+                text = "🔗 ربط الجهاز بحساب الوالدين"
+                textSize = 16f
+                setTypeface(null, Typeface.BOLD)
+                setTextColor(0xFF38BDF8.toInt())
+                setPadding(0, 0, 0, 12)
+            }
+            pairingCard.addView(pairTitle)
+
             val serverInput = EditText(this).apply {
-                hint = "Backend Server URL"
+                hint = "عنوان سيرفر سَنَد (Backend Server URL)"
                 val savedUrl = KidsAgentApp.instance.prefs.getString(KidsAgentApp.KEY_SERVER_URL, null)
                 setText(if (!savedUrl.isNullOrBlank()) savedUrl else "http://192.168.1.110:8080")
                 setTextColor(Color.WHITE)
                 setHintTextColor(0xFF94A3B8.toInt())
-                setBackgroundColor(0xFF1E293B.toInt())
-                setPadding(30, 30, 30, 30)
+                background = makeShape(0xFF0F172A.toInt(), 0xFF475569.toInt(), 8f)
+                setPadding(28, 24, 28, 24)
             }
-            root.addView(serverInput)
+            pairingCard.addView(serverInput)
 
             val codeInput = EditText(this).apply {
-                hint = "Enter 6-Digit Pairing Code"
+                hint = "أدخل رمز الاقتران المكون من 6 أرقام"
                 setTextColor(Color.WHITE)
                 setHintTextColor(0xFF94A3B8.toInt())
-                setBackgroundColor(0xFF1E293B.toInt())
-                setPadding(30, 30, 30, 30)
+                background = makeShape(0xFF0F172A.toInt(), 0xFF475569.toInt(), 8f)
+                setPadding(28, 24, 28, 24)
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 ).apply { topMargin = 20 }
             }
-            root.addView(codeInput)
+            pairingCard.addView(codeInput)
 
             val pairButton = Button(this).apply {
-                text = "Pair Device with Family"
-                setBackgroundColor(0xFF2563EB.toInt())
+                text = "⚡ إتمام الاقتران وربط الجهاز"
+                background = makeShape(0xFF2563EB.toInt(), 0, 10f)
                 setTextColor(Color.WHITE)
                 setTypeface(null, Typeface.BOLD)
+                textSize = 15f
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply { topMargin = 30 }
+                ).apply { topMargin = 24 }
                 setOnClickListener {
                     val code = codeInput.text.toString().trim()
                     val server = serverInput.text.toString().trim()
                     if (code.length == 6 && server.isNotEmpty()) {
                         performPairing(code, server)
                     } else {
-                        Toast.makeText(this@MainActivity, "Enter 6-digit code and server URL", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@MainActivity, "يرجى إدخال الرمز المكون من 6 أرقام وعنوان السيرفر", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
-            root.addView(pairButton)
+            pairingCard.addView(pairButton)
+            root.addView(pairingCard)
         } else {
             // SOS Emergency Button
             val sosButton = Button(this).apply {
                 text = "🚨 زر الاستغاثة للطوارئ (SOS EMERGENCY) 🚨"
-                setBackgroundColor(0xFFDC2626.toInt())
+                background = makeShape(0xFFDC2626.toInt(), 0xFFFCA5A5.toInt(), 12f)
                 setTextColor(Color.WHITE)
-                textSize = 16f
+                textSize = 15f
                 setTypeface(null, Typeface.BOLD)
-                setPadding(20, 35, 20, 35)
+                setPadding(20, 32, 20, 32)
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply { bottomMargin = 30 }
+                ).apply { bottomMargin = 24 }
                 setOnClickListener {
                     triggerSOSAlert()
                 }
             }
             root.addView(sosButton)
+        }
 
-            // Permissions Management Center
-            val sectionTitle = TextView(this).apply {
-                text = "Protection Permissions (صلاحيات الحماية والوصول)"
-                textSize = 18f
-                setTypeface(null, Typeface.BOLD)
-                setTextColor(0xFF38BDF8.toInt())
-                setPadding(0, 10, 0, 20)
+        // 3. Permissions & System Health Dashboard (ALWAYS VISIBLE!)
+        val permSectionHeader = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, 8, 0, 16)
+        }
+
+        val sectionTitle = TextView(this).apply {
+            text = "📋 مركز الصلاحيات وحالة الحماية"
+            textSize = 18f
+            setTypeface(null, Typeface.BOLD)
+            setTextColor(0xFF38BDF8.toInt())
+        }
+        permSectionHeader.addView(sectionTitle)
+
+        val subtitle = TextView(this).apply {
+            text = "يرجى تفعيل كافة الصلاحيات أدناه لضمان عمل الحماية الكاملة (لقطات الشاشة، حظر التطبيقات، البث المباشر، وتتبع الموقع):"
+            textSize = 12f
+            setTextColor(0xFF94A3B8.toInt())
+            setPadding(0, 6, 0, 12)
+        }
+        permSectionHeader.addView(subtitle)
+        root.addView(permSectionHeader)
+
+        // Health Summary Card (Progress & Count)
+        val healthCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = makeShape(0xFF1E293B.toInt(), 0xFF334155.toInt(), 12f)
+            setPadding(28, 20, 28, 20)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = 20 }
+        }
+
+        healthSummaryView = TextView(this).apply {
+            text = "جاري فحص حالة الصلاحيات..."
+            textSize = 14f
+            setTypeface(null, Typeface.BOLD)
+            setTextColor(Color.WHITE)
+        }
+        healthCard.addView(healthSummaryView)
+
+        healthProgressBar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
+            max = 10
+            progress = 0
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                (14 * resources.displayMetrics.density).toInt()
+            ).apply { topMargin = 12 }
+        }
+        healthCard.addView(healthProgressBar)
+        root.addView(healthCard)
+
+        // Accessibility Specific Alert Card (appears when accessibility is off)
+        accessibilityWarningCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = makeShape(0x22EF4444.toInt(), 0xFFEF4444.toInt(), 12f)
+            setPadding(24, 20, 24, 20)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = 20 }
+            visibility = View.GONE
+        }
+
+        val accWarnTitle = TextView(this).apply {
+            text = "⚠️ خدمة إمكانية الوصول (Accessibility) غير مفعلة!"
+            textSize = 14f
+            setTypeface(null, Typeface.BOLD)
+            setTextColor(0xFFFCA5A5.toInt())
+        }
+        accessibilityWarningCard?.addView(accWarnTitle)
+
+        val accWarnDesc = TextView(this).apply {
+            text = "لن تعمل لقطات الشاشة عن بُعد الصامتة، حظر التطبيقات، أو درع الأمان حتى يتم تفعيل الخدمة من إعدادات الجهاز."
+            textSize = 12f
+            setTextColor(0xFFE2E8F0.toInt())
+            setPadding(0, 6, 0, 12)
+        }
+        accessibilityWarningCard?.addView(accWarnDesc)
+
+        val btnFixAcc = Button(this).apply {
+            text = "⚙️ تفعيل خدمة الوصول الآن"
+            background = makeShape(0xFFDC2626.toInt(), 0, 8f)
+            setTextColor(Color.WHITE)
+            setTypeface(null, Typeface.BOLD)
+            textSize = 13f
+            setOnClickListener {
+                startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
             }
-            root.addView(sectionTitle)
+        }
+        accessibilityWarningCard?.addView(btnFixAcc)
+        root.addView(accessibilityWarningCard)
 
-            val subtitle = TextView(this).apply {
-                text = "Grant all items below so remote camera, GPS, app blocking, contacts, messages, and device lock function properly:"
-                textSize = 13f
-                setTextColor(0xFF94A3B8.toInt())
-                setPadding(0, 0, 0, 24)
+        // Android 13/14 Restricted Settings Guide Card
+        val restrictedCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = makeShape(0xFF1E293B.toInt(), 0xFF0284C7.toInt(), 12f)
+            setPadding(24, 20, 24, 20)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = 20 }
+        }
+
+        val restTitle = TextView(this).apply {
+            text = "ℹ️ لمستخدمي أندرويد 13 وأندرويد 14 (الإعدادات المقيدة):"
+            textSize = 13f
+            setTypeface(null, Typeface.BOLD)
+            setTextColor(0xFF38BDF8.toInt())
+        }
+        restrictedCard.addView(restTitle)
+
+        val restDesc = TextView(this).apply {
+            text = "إذا ظهرت خدمة إمكانية الوصول أو الإشعارات باللون الرمادي مع عبارة 'إعداد مقيد' (Restricted Setting):\n" +
+                    "1. اضغط على الزر أدناه لفتح صفحة 'معلومات التطبيق'.\n" +
+                    "2. اضغط على النقاط الثلاث (⋮) بأعلى الشاشة.\n" +
+                    "3. اختر 'السماح بالإعدادات المقيدة' (Allow restricted settings).\n" +
+                    "4. ارجع إلى هنا وفعّل خدمة إمكانية الوصول."
+            textSize = 11.5f
+            setTextColor(0xFFCBD5E1.toInt())
+            setPadding(0, 8, 0, 14)
+            setLineSpacing(4f, 1f)
+        }
+        restrictedCard.addView(restDesc)
+
+        val btnOpenAppInfo = Button(this).apply {
+            text = "🔓 فتح معلومات التطبيق لفك التقييد (App Info)"
+            background = makeShape(0xFF0284C7.toInt(), 0, 8f)
+            setTextColor(Color.WHITE)
+            setTypeface(null, Typeface.BOLD)
+            textSize = 12.5f
+            setOnClickListener {
+                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.parse("package:$packageName")
+                }
+                startActivity(intent)
             }
-            root.addView(subtitle)
+        }
+        restrictedCard.addView(btnOpenAppInfo)
+        root.addView(restrictedCard)
 
-            permissionsContainer = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
+        // One-Click Batch Grant Button
+        val batchButton = Button(this).apply {
+            text = "⚡ طلب ومنح الصلاحيات الأساسية دفعة واحدة"
+            background = makeShape(0xFF2563EB.toInt(), 0, 10f)
+            setTextColor(Color.WHITE)
+            setTypeface(null, Typeface.BOLD)
+            textSize = 14f
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = 24 }
+            setOnClickListener {
+                requestBatchRuntimePermissions()
             }
-            root.addView(permissionsContainer)
+        }
+        root.addView(batchButton)
 
-            refreshPermissionCards()
+        // Container for all 10 individual permission cards
+        permissionsContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+        root.addView(permissionsContainer)
 
-            // Sync Now Button
+        // Initial render of permission cards
+        refreshPermissionCards()
+
+        // 4. Paired-Only Management Actions (Sync & Re-Pair)
+        if (isPaired) {
             val syncButton = Button(this).apply {
-                text = "Sync Device Status Now"
-                setBackgroundColor(0xFF10B981.toInt())
+                text = "🔄 مزامنة بيانات الحماية الآن (Sync Now)"
+                background = makeShape(0xFF10B981.toInt(), 0, 10f)
                 setTextColor(Color.WHITE)
                 setTypeface(null, Typeface.BOLD)
+                textSize = 14f
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply { topMargin = 40 }
+                ).apply { topMargin = 24; bottomMargin = 16 }
                 setOnClickListener {
                     ForegroundSyncService.start(this@MainActivity)
-                    Toast.makeText(this@MainActivity, "Device data synced with parents!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@MainActivity, "تم بدء مزامنة بيانات الجهاز مع لوحة الوالدين!", Toast.LENGTH_SHORT).show()
                 }
             }
             root.addView(syncButton)
 
-            // Re-Pair / Change Pairing Section
             val serverUrl = KidsAgentApp.instance.prefs.getString(KidsAgentApp.KEY_SERVER_URL, "") ?: ""
             val deviceId = KidsAgentApp.instance.prefs.getString(KidsAgentApp.KEY_DEVICE_ID, "") ?: ""
 
             val infoCard = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
-                setBackgroundColor(0xFF1E293B.toInt())
-                setPadding(30, 24, 30, 24)
+                background = makeShape(0xFF1E293B.toInt(), 0xFF334155.toInt(), 12f)
+                setPadding(28, 20, 28, 20)
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply { topMargin = 30; bottomMargin = 16 }
+                ).apply { topMargin = 16; bottomMargin = 16 }
             }
 
             val infoTitle = TextView(this).apply {
@@ -241,15 +458,16 @@ class MainActivity : AppCompatActivity() {
 
             val unpairButton = Button(this).apply {
                 text = "🔄 تغيير الاقتران / ربط بكود جديد (Re-Pair)"
-                setBackgroundColor(0xFF475569.toInt())
+                background = makeShape(0xFF475569.toInt(), 0, 10f)
                 setTextColor(Color.WHITE)
                 setTypeface(null, Typeface.BOLD)
+                textSize = 13f
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 ).apply { bottomMargin = 40 }
                 setOnClickListener {
-                    androidx.appcompat.app.AlertDialog.Builder(this@MainActivity)
+                    AlertDialog.Builder(this@MainActivity)
                         .setTitle("تغيير الاقتران / فك الارتباط")
                         .setMessage("هل أنت متأكد من رغبتك في فك اقتران هذا الجهاز؟ سيتيح لك هذا إدخال كود اقتران جديد وربطه بحساب أو طفل مختلف.")
                         .setPositiveButton("نعم، فك الاقتران") { _, _ ->
@@ -275,36 +493,60 @@ class MainActivity : AppCompatActivity() {
         val container = permissionsContainer ?: return
         container.removeAllViews()
 
-        // 1. Core Sensors: GPS, Camera, Mic, Notifications
-        val runtimeOk = hasRuntimePermissions()
+        var grantedCount = 0
+        val totalCount = 10
+
+        // 1. Accessibility Service
+        val accessOk = isAccessibilityServiceEnabled()
+        if (accessOk) grantedCount++
         container.addView(buildPermissionCard(
-            title = "1. Core Sensors (الموقع، الكاميرا، الصوت)",
-            desc = "Allows GPS tracking, live remote camera, and audio.",
-            isGranted = runtimeOk,
-            actionLabel = "Grant Permissions",
-            onAction = { requestRuntimePermissionsIfNeeded() }
+            title = "1. خدمة إمكانية الوصول (Accessibility)",
+            desc = "ضرورية لالتقاط لقطات الشاشة عن بُعد الصامتة، فحص الروابط والمواقع، حظر التطبيقات، ومنع حذف التطبيق.",
+            isGranted = accessOk,
+            actionLabel = "⚙️ تفعيل خدمة الوصول",
+            onAction = {
+                startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            }
         ))
 
-        // 2. Usage Stats
+        // Update accessibility warning card visibility
+        accessibilityWarningCard?.visibility = if (accessOk) View.GONE else View.VISIBLE
+
+        // 2. Notification Access (Listener)
+        val notifListenerOk = isNotificationListenerEnabled()
+        if (notifListenerOk) grantedCount++
+        container.addView(buildPermissionCard(
+            title = "2. الوصول إلى الإشعارات (Notification Access)",
+            desc = "لقراءة إشعارات واتساب، تلغرام، والرسائل، وتطبيق المسح الذكي للكشف عن الكلمات الخادشة أو الخطرة فوراً.",
+            isGranted = notifListenerOk,
+            actionLabel = "🔔 تفعيل قراءة الإشعارات",
+            onAction = {
+                startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+            }
+        ))
+
+        // 3. Usage Stats
         val usageTracker = UsageTracker(this)
         val usageOk = usageTracker.hasUsagePermission()
+        if (usageOk) grantedCount++
         container.addView(buildPermissionCard(
-            title = "2. App Usage Access (بيانات استخدام التطبيقات)",
-            desc = "Enables app limits, app inventory, and screen time reports.",
+            title = "3. بيانات استخدام التطبيقات (Usage Access)",
+            desc = "لحساب وقت الشاشة اليومي، التطبيقات الأكثر استخداماً، وتطبيق حدود الاستخدام والجدول الزمني.",
             isGranted = usageOk,
-            actionLabel = "Enable Usage Access",
+            actionLabel = "📊 تفعيل إحصائيات الاستخدام",
             onAction = {
                 startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
             }
         ))
 
-        // 3. Draw Over Other Apps
+        // 4. Draw Over Other Apps
         val overlayOk = hasOverlayPermission()
+        if (overlayOk) grantedCount++
         container.addView(buildPermissionCard(
-            title = "3. Display Over Apps (شاشة القفل فوق التطبيقات)",
-            desc = "Enables full-screen parental lock when device is locked.",
+            title = "4. الظهور فوق التطبيقات (Display Over Apps)",
+            desc = "لعرض شاشة قفل الوالدين ومنع تشغيل التطبيقات المحظورة فوراً على كامل الشاشة.",
             isGranted = overlayOk,
-            actionLabel = "Enable Overlay",
+            actionLabel = "🔲 تفعيل الظهور فوق التطبيقات",
             onAction = {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     val intent = Intent(
@@ -316,42 +558,88 @@ class MainActivity : AppCompatActivity() {
             }
         ))
 
-        // 4. Device Administrator
+        // 5. Device Administrator
         val adminOk = isDeviceAdminActive()
+        if (adminOk) grantedCount++
         container.addView(buildPermissionCard(
-            title = "4. Device Administrator (مدير الجهاز للقفل الفوري)",
-            desc = "Allows instant remote hardware screen locking.",
+            title = "5. مدير ومسؤول الجهاز (Device Administrator)",
+            desc = "لتمكين القفل الفوري لشاشة الهاتف عتادياً عن بُعد من خلال ضغطة زر واحدة في لوحة الوالدين.",
             isGranted = adminOk,
-            actionLabel = "Activate Admin",
+            actionLabel = "🛡️ تفعيل مدير الجهاز",
             onAction = {
                 val adminComponent = ComponentName(this, AgentDeviceAdminReceiver::class.java)
                 val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
                     putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, adminComponent)
-                    putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, "Enables parental remote lock.")
+                    putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, "يسمح لوالديك بقفل الشاشة فورياً للحماية الأسرية.")
                 }
                 startActivity(intent)
             }
         ))
 
-        // 5. Accessibility Service
-        val accessOk = isAccessibilityServiceEnabled()
+        // 6. Location (GPS)
+        val locOk = hasLocationPermission()
+        if (locOk) grantedCount++
         container.addView(buildPermissionCard(
-            title = "5. Accessibility Service (لقطة الشاشة الفورية، حظر التطبيقات، الحماية)",
-            desc = "Allows instant silent remote screenshots, safe web filtering, app blocking, and anti-uninstall shield.",
-            isGranted = accessOk,
-            actionLabel = "Enable Accessibility",
+            title = "6. الموقع الجغرافي المباشر (GPS Location)",
+            desc = "لتتبع مكان الطفل على الخريطة وسجل التنقلات والمناطق الآمنة (Geofencing) في الوقت الفعلي.",
+            isGranted = locOk,
+            actionLabel = "📍 منح صلاحية الموقع",
             onAction = {
-                startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
+                    REQUEST_PERMS_LOCATION
+                )
             }
         ))
 
-        // 6. Battery Optimization
-        val batteryOk = isIgnoringBatteryOptimizations()
+        // 7. Camera & Microphone
+        val camMicOk = hasCameraAndMicPermission()
+        if (camMicOk) grantedCount++
         container.addView(buildPermissionCard(
-            title = "6. Background Keep-Alive (استثناء توفير الطاقة)",
-            desc = "Keeps Kids Agent running 24/7 in the background without being killed.",
+            title = "7. الكاميرا والصوت المباشر (Camera & Audio)",
+            desc = "للبث المباشر للصوت والصورة عبر WebRTC والاستماع للمحيط في الحالات الطارئة.",
+            isGranted = camMicOk,
+            actionLabel = "🎙️ منح صلاحية الكاميرا والمايك",
+            onAction = {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO),
+                    REQUEST_PERMS_CAMERA_MIC
+                )
+            }
+        ))
+
+        // 8. Calls, SMS & Contacts
+        val callsSmsOk = hasCallsAndSmsPermission()
+        if (callsSmsOk) grantedCount++
+        container.addView(buildPermissionCard(
+            title = "8. سجل المكالمات والرسائل وجهات الاتصال",
+            desc = "لمزامنة سجل المكالمات والرسائل النصية والأسماء لاكتشاف الأرقام المجهولة والتواصل الخطر.",
+            isGranted = callsSmsOk,
+            actionLabel = "📞 منح صلاحية المكالمات والرسائل",
+            onAction = {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(
+                        Manifest.permission.READ_CALL_LOG,
+                        Manifest.permission.READ_SMS,
+                        Manifest.permission.RECEIVE_SMS,
+                        Manifest.permission.READ_CONTACTS
+                    ),
+                    REQUEST_PERMS_CALLS_SMS
+                )
+            }
+        ))
+
+        // 9. Battery Optimization
+        val batteryOk = isIgnoringBatteryOptimizations()
+        if (batteryOk) grantedCount++
+        container.addView(buildPermissionCard(
+            title = "9. استثناء توفير الطاقة (Battery Optimization)",
+            desc = "لضمان استمرار الحماية ومزامنة البيانات 24/7 بالخلفية دون أن يوقف نظام أندرويد التطبيق.",
             isGranted = batteryOk,
-            actionLabel = "Ignore Optimization",
+            actionLabel = "🔋 استثناء من توفير الطاقة",
             onAction = {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
@@ -362,40 +650,38 @@ class MainActivity : AppCompatActivity() {
             }
         ))
 
-        // 7. Screen Streaming & Mirroring
-        val screenOk = com.parentalcontrol.kidsagent.webrtc.MediaProjectionHolder.isGranted
+        // 10. Screen Streaming & Mirroring
+        val screenOk = MediaProjectionHolder.isGranted
+        if (screenOk) grantedCount++
         container.addView(buildPermissionCard(
-            title = "7. Screen Mirroring (بث ومراقبة الشاشة المباشر)",
-            desc = "Allows instant live remote screen streaming to the parent app and web dashboard.",
+            title = "10. بث ومشاركة الشاشة (Screen Mirroring)",
+            desc = "لمشاهدة ومراقبة شاشة الجهاز مباشرة عبر تقنية WebRTC من لوحة الوالدين.",
             isGranted = screenOk,
-            actionLabel = "Enable Screen Mirroring",
+            actionLabel = "📺 تفعيل بث الشاشة",
             onAction = {
-                val mgr = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as? android.media.projection.MediaProjectionManager
+                val mgr = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as? MediaProjectionManager
                 if (mgr != null) {
                     try {
                         startActivityForResult(mgr.createScreenCaptureIntent(), REQUEST_SCREEN_CAPTURE)
                     } catch (e: Exception) {
-                        Toast.makeText(this, "Failed to request screen capture: ${e.message}", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, "فشل طلب مشاركة الشاشة: ${e.message}", Toast.LENGTH_SHORT).show()
                     }
                 } else {
-                    Toast.makeText(this, "MediaProjection not supported on this device", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "مشاركة الشاشة غير مدعومة على هذا الجهاز", Toast.LENGTH_SHORT).show()
                 }
             }
         ))
-    }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQUEST_SCREEN_CAPTURE) {
-            if (resultCode == RESULT_OK && data != null) {
-                com.parentalcontrol.kidsagent.webrtc.MediaProjectionHolder.setProjection(data)
-                ForegroundSyncService.onScreenCapturePermissionGranted(data)
-                refreshPermissionCards()
-                Toast.makeText(this, "تم تفعيل بث ومراقبة الشاشة بنجاح!", Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(this, "تم إلغاء إذن بث الشاشة", Toast.LENGTH_SHORT).show()
-            }
+        // Update Health Summary Header
+        val pct = (grantedCount * 100) / totalCount
+        healthProgressBar?.progress = grantedCount
+        val statusText = if (grantedCount == totalCount) {
+            "✅ درع الحماية مكتمل بنسبة 100% (جميع الصلاحيات الـ $totalCount مفعلة)"
+        } else {
+            "⚠️ تم تفعيل $grantedCount من أصل $totalCount صلاحيات ($pct%) - يرجى إكمال المتبقي"
         }
+        healthSummaryView?.text = statusText
+        healthSummaryView?.setTextColor(if (grantedCount == totalCount) 0xFF22C55E.toInt() else 0xFFF59E0B.toInt())
     }
 
     private fun buildPermissionCard(
@@ -407,12 +693,16 @@ class MainActivity : AppCompatActivity() {
     ): View {
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(0xFF1E293B.toInt())
-            setPadding(30, 24, 30, 24)
+            background = makeShape(
+                0xFF1E293B.toInt(),
+                if (isGranted) 0x3322C55E else 0x33F59E0B,
+                12f
+            )
+            setPadding(28, 22, 28, 22)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { bottomMargin = 20 }
+            ).apply { bottomMargin = 16 }
         }
 
         val topRow = LinearLayout(this).apply {
@@ -422,7 +712,7 @@ class MainActivity : AppCompatActivity() {
 
         val titleTv = TextView(this).apply {
             text = title
-            textSize = 15f
+            textSize = 14.5f
             setTypeface(null, Typeface.BOLD)
             setTextColor(Color.WHITE)
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
@@ -430,12 +720,16 @@ class MainActivity : AppCompatActivity() {
         topRow.addView(titleTv)
 
         val statusTv = TextView(this).apply {
-            text = if (isGranted) "✓ Granted" else "⚠ Required"
+            text = if (isGranted) "مفعلة ✅" else "غير مفعلة ⚠️"
             textSize = 12f
             setTypeface(null, Typeface.BOLD)
             setTextColor(if (isGranted) 0xFF22C55E.toInt() else 0xFFF59E0B.toInt())
             setPadding(16, 6, 16, 6)
-            setBackgroundColor(if (isGranted) 0x2222C55E else 0x22F59E0B)
+            background = makeShape(
+                if (isGranted) 0x2222C55E else 0x22F59E0B,
+                if (isGranted) 0xFF22C55E.toInt() else 0xFFF59E0B.toInt(),
+                6f
+            )
         }
         topRow.addView(statusTv)
         card.addView(topRow)
@@ -444,7 +738,8 @@ class MainActivity : AppCompatActivity() {
             text = desc
             textSize = 12f
             setTextColor(0xFF94A3B8.toInt())
-            setPadding(0, 10, 0, 16)
+            setPadding(0, 10, 0, 14)
+            setLineSpacing(2f, 1f)
         }
         card.addView(descTv)
 
@@ -452,30 +747,75 @@ class MainActivity : AppCompatActivity() {
             val btn = Button(this).apply {
                 text = actionLabel
                 textSize = 13f
-                setBackgroundColor(0xFF3B82F6.toInt())
+                setTypeface(null, Typeface.BOLD)
+                background = makeShape(0xFF2563EB.toInt(), 0, 8f)
                 setTextColor(Color.WHITE)
                 setOnClickListener { onAction() }
             }
             card.addView(btn)
+        } else {
+            val okLabel = TextView(this).apply {
+                text = "✓ الصلاحية نشطة وتعمل بكفاءة"
+                textSize = 11.5f
+                setTextColor(0xFF22C55E.toInt())
+            }
+            card.addView(okLabel)
         }
 
         return card
     }
 
-    private fun hasRuntimePermissions(): Boolean {
-        val fineLoc = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        val cam = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
-        val mic = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
-        val contacts = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
-        val sms = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED
-        val callLog = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CALL_LOG) == PackageManager.PERMISSION_GRANTED
-        val notif = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-        } else true
-        return fineLoc && cam && mic && contacts && sms && callLog && notif
+    private fun hasLocationPermission(): Boolean {
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
     }
 
-    private fun requestRuntimePermissionsIfNeeded() {
+    private fun hasCameraAndMicPermission(): Boolean {
+        val cam = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+        val mic = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+        return cam && mic
+    }
+
+    private fun hasCallsAndSmsPermission(): Boolean {
+        val call = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CALL_LOG) == PackageManager.PERMISSION_GRANTED
+        val sms = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED
+        val contacts = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
+        return call && sms && contacts
+    }
+
+    private fun hasOverlayPermission(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            Settings.canDrawOverlays(this)
+        } else true
+    }
+
+    private fun isDeviceAdminActive(): Boolean {
+        val dpm = getSystemService(Context.DEVICE_POLICY_SERVICE) as? DevicePolicyManager
+        val adminComponent = ComponentName(this, AgentDeviceAdminReceiver::class.java)
+        return dpm?.isAdminActive(adminComponent) ?: false
+    }
+
+    private fun isAccessibilityServiceEnabled(): Boolean {
+        if (AgentAccessibilityService.instance != null) return true
+        val expected = ComponentName(this, AgentAccessibilityService::class.java).flattenToString()
+        val enabled = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) ?: ""
+        return enabled.contains(expected)
+    }
+
+    private fun isNotificationListenerEnabled(): Boolean {
+        if (AgentNotificationListener.instance != null) return true
+        val listeners = NotificationManagerCompat.getEnabledListenerPackages(this)
+        return listeners.contains(packageName)
+    }
+
+    private fun isIgnoringBatteryOptimizations(): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val pm = getSystemService(Context.POWER_SERVICE) as? PowerManager
+            return pm?.isIgnoringBatteryOptimizations(packageName) ?: false
+        }
+        return true
+    }
+
+    private fun requestBatchRuntimePermissions() {
         val perms = mutableListOf<String>()
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             perms.add(Manifest.permission.ACCESS_FINE_LOCATION)
@@ -492,6 +832,7 @@ class MainActivity : AppCompatActivity() {
         }
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED) {
             perms.add(Manifest.permission.READ_SMS)
+            perms.add(Manifest.permission.RECEIVE_SMS)
         }
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED) {
             perms.add(Manifest.permission.READ_CALL_LOG)
@@ -503,20 +844,29 @@ class MainActivity : AppCompatActivity() {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED) {
                 perms.add(Manifest.permission.READ_MEDIA_IMAGES)
             }
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_VIDEO) != PackageManager.PERMISSION_GRANTED) {
+                perms.add(Manifest.permission.READ_MEDIA_VIDEO)
+            }
         } else {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                 perms.add(Manifest.permission.READ_EXTERNAL_STORAGE)
             }
         }
         if (perms.isNotEmpty()) {
-            ActivityCompat.requestPermissions(this, perms.toTypedArray(), 101)
+            ActivityCompat.requestPermissions(this, perms.toTypedArray(), REQUEST_PERMS_BATCH)
+        } else {
+            Toast.makeText(this, "جميع الصلاحيات الأساسية ممنوحة بالفعل!", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun requestRuntimePermissionsIfNeeded() {
+        requestBatchRuntimePermissions()
     }
 
     private fun triggerSOSAlert() {
         val app = KidsAgentApp.instance
         if (!app.isPaired()) {
-            Toast.makeText(this, "Device must be paired first", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "يجب إقران الجهاز أولاً لتفعيل الاستغاثة", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -530,9 +880,7 @@ class MainActivity : AppCompatActivity() {
                 lat = lastLoc.latitude
                 lon = lastLoc.longitude
             }
-        } catch (e: Exception) {
-            // Ignored
-        }
+        } catch (_: Exception) {}
 
         val bm = getSystemService(Context.BATTERY_SERVICE) as? android.os.BatteryManager
         val battery = bm?.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: 100
@@ -550,32 +898,6 @@ class MainActivity : AppCompatActivity() {
             wsClient.sendMessage("SOS_ALERT", payload)
             Toast.makeText(this, "🚨 تم إرسال نداء الاستغاثة والموقع لوالديك بنجاح!", Toast.LENGTH_LONG).show()
         }, 800L)
-    }
-
-    private fun hasOverlayPermission(): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            Settings.canDrawOverlays(this)
-        } else true
-    }
-
-    private fun isDeviceAdminActive(): Boolean {
-        val dpm = getSystemService(Context.DEVICE_POLICY_SERVICE) as? DevicePolicyManager
-        val adminComponent = ComponentName(this, AgentDeviceAdminReceiver::class.java)
-        return dpm?.isAdminActive(adminComponent) ?: false
-    }
-
-    private fun isAccessibilityServiceEnabled(): Boolean {
-        val expected = ComponentName(this, AgentAccessibilityService::class.java).flattenToString()
-        val enabled = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) ?: ""
-        return enabled.contains(expected)
-    }
-
-    private fun isIgnoringBatteryOptimizations(): Boolean {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val pm = getSystemService(Context.POWER_SERVICE) as? PowerManager
-            return pm?.isIgnoringBatteryOptimizations(packageName) ?: false
-        }
-        return true
     }
 
     private fun performPairing(code: String, serverUrl: String) {
@@ -614,7 +936,7 @@ class MainActivity : AppCompatActivity() {
                         KidsAgentApp.instance.savePairing(deviceId, familyId, childId, secret, serverUrl)
 
                         withContext(Dispatchers.Main) {
-                            Toast.makeText(this@MainActivity, "Device paired successfully!", Toast.LENGTH_LONG).show()
+                            Toast.makeText(this@MainActivity, "تم ربط الجهاز بالأسرة بنجاح!", Toast.LENGTH_LONG).show()
                             try {
                                 ForegroundSyncService.start(this@MainActivity)
                             } catch (e: Throwable) {
@@ -628,17 +950,17 @@ class MainActivity : AppCompatActivity() {
                         }
                     } else {
                         withContext(Dispatchers.Main) {
-                            Toast.makeText(this@MainActivity, "Invalid pairing response from server", Toast.LENGTH_LONG).show()
+                            Toast.makeText(this@MainActivity, "استجابة غير صالحة من السيرفر", Toast.LENGTH_LONG).show()
                         }
                     }
                 } else {
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(this@MainActivity, "Pairing failed: $respBody", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this@MainActivity, "فشل الاقتران: $respBody", Toast.LENGTH_LONG).show()
                     }
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(this@MainActivity, "Network error: ${e.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@MainActivity, "خطأ في الاتصال بالشبكة: ${e.message}", Toast.LENGTH_LONG).show()
                 }
             }
         }
