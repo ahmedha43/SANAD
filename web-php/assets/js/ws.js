@@ -371,3 +371,16 @@ const WS = {
 };
 
 window.WS = WS;
+
+window.reconnectWebSocket = function() {
+    if (!window.STATE?.token) {
+        if (typeof logout === 'function') logout();
+        return;
+    }
+    UI.setWsStatus('syncing');
+    UI.showToast('جاري إعادة الاتصال بالسيرفر...', 'info');
+    if (typeof WS !== 'undefined') {
+        WS.disconnect();
+        setTimeout(() => WS.connect(window.STATE.token), 300);
+    }
+};

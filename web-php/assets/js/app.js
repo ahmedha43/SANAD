@@ -413,7 +413,21 @@ const App = {
             }
         } catch (err) {
             console.error('Failed to load children:', err);
-            if (err.message.includes('401') || err.message.includes('Unauthorized')) {
+            const container = document.getElementById('childrenCardsContainer');
+            if (container) {
+                container.innerHTML = `
+                    <div class="no-children-banner" style="border-color: var(--accent-rose); padding: 16px; text-align: center;">
+                        <i class="fa-solid fa-triangle-exclamation" style="color: var(--accent-rose); font-size: 24px; margin-bottom: 8px;"></i>
+                        <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">تعذر تحميل بيانات أجهزة الأطفال</div>
+                        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">${err.message || 'خطأ في الاتصال بالخادم'}</div>
+                        <button class="btn btn-secondary btn-sm" onclick="App.loadChildren()">
+                            <i class="fa-solid fa-rotate"></i>
+                            <span>إعادة المحاولة</span>
+                        </button>
+                    </div>
+                `;
+            }
+            if (err.message && (err.message.includes('401') || err.message.includes('Unauthorized') || err.message.includes('expired') || err.message.includes('token') || err.message.includes('الجلسة'))) {
                 logout();
             }
         }

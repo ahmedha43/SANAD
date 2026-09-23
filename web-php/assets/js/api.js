@@ -25,7 +25,14 @@ const API = {
         if (body) opts.body = JSON.stringify(body);
         try {
             const res = await fetch(this.base + path, opts);
-            const data = await res.json().catch(() => ({}));
+            if (res.status === 401) {
+                console.warn('[API] 401 Unauthorized - Session invalid or expired.');
+                if (typeof logout === 'function') {
+                    UI.showToast('انتهت صلاحية جلسة تسجيل الدخول، يرجى إعادة تسجيل الدخول', 'error');
+                    logout();
+                }
+                throw new Error('انتهت صلاحية الجلسة (401 Unauthorized)');
+            }
             if (res.status === 402 || data.error === 'subscription_expired' || data.error === 'subscription_suspended') {
                 if (window.UI?.showSubscriptionExpiredModal) {
                     window.UI.showSubscriptionExpiredModal(data);

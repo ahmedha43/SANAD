@@ -54,8 +54,8 @@ func LoadConfig() *Config {
 		RedisPassword: getEnv("REDIS_PASSWORD", "pc_redis_secret_password_2026"),
 
 		JWTSecret:           getEnv("JWT_SECRET", "018f45a0b9e87d6a5c4b3a2f1e0d9c8b7a654321fedcba0987654321abcdef01"),
-		JWTAccessTTLMinutes: getEnvAsInt("JWT_ACCESS_TTL_MINUTES", 60*24), // 24 hours for dev
-		JWTRefreshTTLDays:   getEnvAsInt("JWT_REFRESH_TTL_DAYS", 30),
+		JWTAccessTTLMinutes: getEnvAsInt("JWT_ACCESS_TTL_MINUTES", 60*24*30), // 30 days for long-lived sessions
+		JWTRefreshTTLDays:   getEnvAsInt("JWT_REFRESH_TTL_DAYS", 90),
 
 		TurnStunURL:    getEnv("TURN_STUN_URL", "stun:127.0.0.1:3478"),
 		TurnURL:        getEnv("TURN_URL", "turn:127.0.0.1:3478"),

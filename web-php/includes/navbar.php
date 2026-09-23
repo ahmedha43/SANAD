@@ -22,7 +22,7 @@ declare(strict_types=1);
 
     <div class="navbar-right">
         <!-- Live Connection Status Badge -->
-        <div class="connection-status" id="globalWsStatus">
+        <div class="connection-status" id="globalWsStatus" onclick="reconnectWebSocket()" style="cursor: pointer;" title="انقر لإعادة الاتصال الفوري بالسيرفر">
             <span class="status-pulse-dot offline" id="wsPulseDot"></span>
             <span class="status-text" id="wsStatusText">جاري الاتصال...</span>
         </div>
