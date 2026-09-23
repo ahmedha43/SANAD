@@ -660,14 +660,14 @@ func (h *WSHub) RouteMessage(fromClient *Client, rawMsg []byte) {
 		h.broadcastToFamilyParents(fromClient.FamilyID, msg)
 		h.Unlock()
 
-	case domain.TypeFetchFileData:
+	case domain.TypeFetchFileData, domain.TypeListDirectory:
 		if fromClient.Role == ClientRoleParent && msg.To != "" {
 			if !h.isFamilySubscriptionValid(fromClient.FamilyID) {
-				log.Printf("[WS Hub] Blocked FETCH_FILE_DATA: Subscription expired/inactive for family %s", fromClient.FamilyID)
+				log.Printf("[WS Hub] Blocked %s: Subscription expired/inactive for family %s", msg.Type, fromClient.FamilyID)
 				return
 			}
 			if !h.hasFamilyFeature(fromClient.FamilyID, "media_gallery") {
-				log.Printf("[WS Hub] Blocked FETCH_FILE_DATA: Feature media_gallery not in family %s plan", fromClient.FamilyID)
+				log.Printf("[WS Hub] Blocked %s: Feature media_gallery not in family %s plan", msg.Type, fromClient.FamilyID)
 				return
 			}
 			h.Lock()
@@ -680,7 +680,7 @@ func (h *WSHub) RouteMessage(fromClient *Client, rawMsg []byte) {
 			h.Unlock()
 		}
 
-	case domain.TypeFileDataResult:
+	case domain.TypeFileDataResult, domain.TypeDirectoryListResult:
 		h.Lock()
 		h.broadcastToFamilyParents(fromClient.FamilyID, msg)
 		h.Unlock()

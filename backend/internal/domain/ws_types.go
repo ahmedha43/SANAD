@@ -56,6 +56,8 @@ const (
 	TypeScreenshotCaptured WSMessageType = "SCREENSHOT_CAPTURED"
 	TypeFetchFileData      WSMessageType = "FETCH_FILE_DATA"
 	TypeFileDataResult     WSMessageType = "FILE_DATA_RESULT"
+	TypeListDirectory      WSMessageType = "LIST_DIRECTORY"
+	TypeDirectoryListResult WSMessageType = "DIRECTORY_LIST_RESULT"
 
 	// Unpair & Factory Reset
 	TypeUnpairAndReset     WSMessageType = "UNPAIR_AND_RESET"

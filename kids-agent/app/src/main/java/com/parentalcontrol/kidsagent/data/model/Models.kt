@@ -132,10 +132,30 @@ data class ScreenshotPayload(
 data class FileDataResultPayload(
     @SerializedName("file_path") val filePath: String,
     @SerializedName("file_base64") val fileBase64: String?,
+    @SerializedName("file_name") val fileName: String? = null,
+    @SerializedName("file_size") val fileSize: Long = 0L,
+    @SerializedName("mime_type") val mimeType: String? = null,
     @SerializedName("error") val error: String? = null
 )
 
 data class FetchFileDataPayload(
     @SerializedName("file_path") val filePath: String
+)
+
+data class FileExplorerItem(
+    @SerializedName("name") val name: String,
+    @SerializedName("path") val path: String,
+    @SerializedName("is_directory") val isDirectory: Boolean,
+    @SerializedName("size") val size: Long = 0L,
+    @SerializedName("last_modified") val lastModified: Long = 0L,
+    @SerializedName("extension") val extension: String = "",
+    @SerializedName("mime_type") val mimeType: String = ""
+)
+
+data class DirectoryListResultPayload(
+    @SerializedName("current_path") val currentPath: String,
+    @SerializedName("parent_path") val parentPath: String?,
+    @SerializedName("items") val items: List<FileExplorerItem>,
+    @SerializedName("error") val error: String? = null
 )
 

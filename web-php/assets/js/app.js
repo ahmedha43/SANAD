@@ -802,30 +802,424 @@ const App = {
         } catch (e) { console.warn('Load notifications failed:', e.message); }
     },
 
-    // === Gallery & Media ===
+    // === Gallery & Media & File Explorer ===
     async loadFiles() {
         try {
-            const res = await API.getFiles(STATE.activeDeviceId);
-            const files = res.data || res.files || res || [];
-            document.getElementById('filesCountBadge').textContent = files.length;
-            const container = document.getElementById('galleryGridContainer');
-            if (!container) return;
+            const devId = STATE.activeDeviceId || (STATE.devices && STATE.devices[0] && STATE.devices[0].id);
+            if (!devId) return;
 
-            if (files.length === 0) {
-                container.innerHTML = `<div class="text-center text-muted" style="grid-column:1/-1; padding:40px;">لا توجد صور مسجلة حتى الآن</div>`;
-                return;
+            const res = await API.getFiles(devId);
+            const files = res.data || res.files || (Array.isArray(res) ? res : []);
+            STATE.cachedFiles = files;
+
+            const badge = document.getElementById('filesCountBadge');
+            if (badge) badge.textContent = files.length;
+            const tabBadge = document.getElementById('filesTabCountBadge');
+            if (tabBadge) tabBadge.textContent = files.length;
+
+            this.renderGalleryGrid(files);
+        } catch (e) {
+            console.warn('Load files failed:', e.message);
+            const container = document.getElementById('galleryGridContainer');
+            if (container) {
+                container.innerHTML = `<div class="text-center text-muted" style="grid-column:1/-1; padding:40px;">
+                    <i class="fa-solid fa-triangle-exclamation" style="font-size:2rem; color:var(--accent-amber); margin-bottom:10px; display:block;"></i>
+                    <div>تعذر تحميل ملفات المعرض حالياً</div>
+                    <button class="btn btn-outline-sm" onclick="requestFilesSync()" style="margin-top:12px;">طلب مزامنة المعرض</button>
+                </div>`;
+            }
+        }
+    },
+
+    renderGalleryGrid(files) {
+        const container = document.getElementById('galleryGridContainer');
+        if (!container) return;
+
+        if (!files || files.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-muted" style="grid-column:1/-1; padding:40px;">
+                    <i class="fa-solid fa-images" style="font-size:2.5rem; margin-bottom:10px; opacity:0.3; display:block;"></i>
+                    <div>لا توجد صور أو وسائط مسجلة حتى الآن</div>
+                    <button class="btn btn-outline-sm" onclick="requestFilesSync()" style="margin-top:14px;">
+                        <i class="fa-solid fa-arrows-rotate"></i>
+                        <span>طلب مزامنة المعرض من جهاز الطفل</span>
+                    </button>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = files.map((f) => {
+            const isVideo = (f.mime_type && f.mime_type.startsWith('video/')) || (f.file_name && f.file_name.endsWith('.mp4'));
+            let thumbSrc = '';
+            if (f.thumbnail_base64) {
+                thumbSrc = `data:${f.mime_type || 'image/jpeg'};base64,${f.thumbnail_base64}`;
+            } else if (f.file_url || f.url) {
+                thumbSrc = f.file_url || f.url;
             }
 
-            container.innerHTML = files.map(f => {
-                const url = f.file_url || f.url || '';
-                return `
-                    <div class="gallery-item" onclick="UI.openMediaPreview('${url}', '${f.file_name || 'صورة'}')">
-                        <img src="${url}" alt="Photo" loading="lazy">
-                        <div class="gallery-item-caption">${f.file_name || 'صورة'}</div>
+            const sizeFormatted = f.file_size ? App.formatFileSize(f.file_size) : '';
+            const safeName = (f.file_name || 'ملف').replace(/'/g, "\\'");
+            const safePath = (f.file_path || '').replace(/'/g, "\\'");
+            const safeMime = (f.mime_type || 'image/jpeg').replace(/'/g, "\\'");
+
+            return `
+                <div class="gallery-item" onclick="App.inspectMediaFile('${safePath}', '${safeName}', '${safeMime}', '${f.thumbnail_base64 || ''}')" title="${safeName}">
+                    ${thumbSrc ? `<img src="${thumbSrc}" alt="${safeName}" loading="lazy">` : `
+                        <div style="height:140px; display:flex; align-items:center; justify-content:center; background:#1e293b;">
+                            <i class="fa-solid ${isVideo ? 'fa-video' : 'fa-image'}" style="font-size:2.5rem; color:#64748b;"></i>
+                        </div>
+                    `}
+                    ${isVideo ? `<div style="position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.6); padding:2px 8px; border-radius:4px; font-size:0.75rem; color:#fff;"><i class="fa-solid fa-video"></i> فيديو</div>` : ''}
+                    <div class="gallery-item-caption">
+                        <div style="font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${f.file_name || 'صورة'}</div>
+                        ${sizeFormatted ? `<span style="font-size:0.75rem; color:#94a3b8;">${sizeFormatted}</span>` : ''}
                     </div>
-                `;
-            }).join('');
-        } catch (e) { console.warn('Load files failed:', e.message); }
+                </div>
+            `;
+        }).join('');
+    },
+
+    filterGallery(type) {
+        document.querySelectorAll('#viewGalleryContainer .btn-filter').forEach(b => b.classList.remove('active'));
+        if (type === 'all') document.getElementById('filterAll')?.classList.add('active');
+        if (type === 'images') document.getElementById('filterImages')?.classList.add('active');
+        if (type === 'videos') document.getElementById('filterVideos')?.classList.add('active');
+
+        if (!STATE.cachedFiles) return;
+        if (type === 'all') {
+            this.renderGalleryGrid(STATE.cachedFiles);
+        } else if (type === 'images') {
+            const filtered = STATE.cachedFiles.filter(f => !f.mime_type?.startsWith('video/') && !f.file_name?.endsWith('.mp4'));
+            this.renderGalleryGrid(filtered);
+        } else if (type === 'videos') {
+            const filtered = STATE.cachedFiles.filter(f => f.mime_type?.startsWith('video/') || f.file_name?.endsWith('.mp4'));
+            this.renderGalleryGrid(filtered);
+        }
+    },
+
+    switchFilesView(view) {
+        const galView = document.getElementById('viewGalleryContainer');
+        const expView = document.getElementById('viewExplorerContainer');
+        const tabGal = document.getElementById('tabBtnGallery');
+        const tabExp = document.getElementById('tabBtnExplorer');
+
+        if (view === 'gallery') {
+            if (galView) galView.style.display = 'block';
+            if (expView) expView.style.display = 'none';
+            if (tabGal) { tabGal.className = 'btn btn-primary-sm'; }
+            if (tabExp) { tabExp.className = 'btn btn-outline-sm'; }
+        } else {
+            if (galView) galView.style.display = 'none';
+            if (expView) expView.style.display = 'block';
+            if (tabGal) { tabGal.className = 'btn btn-outline-sm'; }
+            if (tabExp) { tabExp.className = 'btn btn-primary-sm'; }
+            if (!STATE.currentDirPath) {
+                this.navigateToDirectory('/storage/emulated/0');
+            }
+        }
+    },
+
+    // Inspect single media file (opens modal and requests full data)
+    inspectMediaFile(filePath, fileName, mimeType, thumbBase64 = '') {
+        STATE.activeModalFile = {
+            filePath: filePath,
+            fileName: fileName,
+            mimeType: mimeType || 'image/jpeg',
+            base64: null
+        };
+
+        const modal = document.getElementById('mediaModal');
+        const titleEl = document.getElementById('mediaModalTitle');
+        const metaEl = document.getElementById('mediaModalMeta');
+        const imgEl = document.getElementById('mediaModalImage');
+        const fileCont = document.getElementById('mediaModalFileContainer');
+        const loadingEl = document.getElementById('mediaModalLoading');
+        const errorEl = document.getElementById('mediaModalError');
+        const downloadBtn = document.getElementById('mediaModalDownloadBtn');
+
+        if (titleEl) titleEl.querySelector('span').textContent = `معاينة: ${fileName}`;
+        if (metaEl) metaEl.textContent = `المسار: ${filePath}`;
+        if (downloadBtn) downloadBtn.style.display = 'none';
+        if (errorEl) errorEl.style.display = 'none';
+
+        const isImage = (mimeType && mimeType.startsWith('image/')) || fileName.match(/\.(jpg|jpeg|png|webp)$/i);
+
+        if (isImage && thumbBase64) {
+            if (imgEl) {
+                imgEl.src = `data:${mimeType};base64,${thumbBase64}`;
+                imgEl.style.display = 'block';
+            }
+            if (fileCont) fileCont.style.display = 'none';
+            if (loadingEl) loadingEl.style.display = 'block';
+        } else {
+            if (imgEl) imgEl.style.display = 'none';
+            if (fileCont) fileCont.style.display = 'none';
+            if (loadingEl) loadingEl.style.display = 'block';
+        }
+
+        UI.openModal('mediaModal');
+
+        // Request full file data via WebSocket
+        const devId = STATE.activeDeviceId || (STATE.devices && STATE.devices[0] && STATE.devices[0].id);
+        if (devId && filePath) {
+            API.fetchFileData(devId, filePath).catch(err => {
+                if (loadingEl) loadingEl.style.display = 'none';
+                if (errorEl) {
+                    errorEl.style.display = 'block';
+                    document.getElementById('mediaModalErrorText').textContent = `تعذر طلب الملف: ${err.message}`;
+                }
+            });
+        }
+    },
+
+    onFileDataResult(payload) {
+        console.log('[App] FILE_DATA_RESULT received for:', payload.file_path);
+        const loadingEl = document.getElementById('mediaModalLoading');
+        const errorEl = document.getElementById('mediaModalError');
+        const imgEl = document.getElementById('mediaModalImage');
+        const fileCont = document.getElementById('mediaModalFileContainer');
+        const downloadBtn = document.getElementById('mediaModalDownloadBtn');
+        const metaEl = document.getElementById('mediaModalMeta');
+
+        if (loadingEl) loadingEl.style.display = 'none';
+
+        if (payload.error) {
+            if (errorEl) {
+                errorEl.style.display = 'block';
+                document.getElementById('mediaModalErrorText').textContent = payload.error;
+            }
+            return;
+        }
+
+        if (errorEl) errorEl.style.display = 'none';
+
+        const fileName = payload.file_name || (STATE.activeModalFile && STATE.activeModalFile.fileName) || 'file';
+        const mimeType = payload.mime_type || (STATE.activeModalFile && STATE.activeModalFile.mimeType) || 'application/octet-stream';
+        const b64 = payload.file_base64;
+
+        STATE.activeModalFile = {
+            filePath: payload.file_path,
+            fileName: fileName,
+            mimeType: mimeType,
+            base64: b64
+        };
+
+        if (metaEl) {
+            const sizeStr = payload.file_size ? App.formatFileSize(payload.file_size) : '';
+            metaEl.textContent = `الملف: ${fileName} ${sizeStr ? `(${sizeStr})` : ''}`;
+        }
+
+        const isImage = mimeType.startsWith('image/') || fileName.match(/\.(jpg|jpeg|png|webp)$/i);
+
+        if (isImage && b64) {
+            if (imgEl) {
+                imgEl.src = `data:${mimeType};base64,${b64}`;
+                imgEl.style.display = 'block';
+            }
+            if (fileCont) fileCont.style.display = 'none';
+        } else {
+            if (imgEl) imgEl.style.display = 'none';
+            if (fileCont) {
+                fileCont.style.display = 'block';
+                const nameEl = document.getElementById('mediaModalFileName');
+                const sizeEl = document.getElementById('mediaModalFileSize');
+                if (nameEl) nameEl.textContent = fileName;
+                if (sizeEl) sizeEl.textContent = payload.file_size ? `الحجم: ${App.formatFileSize(payload.file_size)}` : '';
+            }
+        }
+
+        if (downloadBtn && b64) {
+            downloadBtn.style.display = 'inline-flex';
+        }
+    },
+
+    downloadActiveModalFile() {
+        if (!STATE.activeModalFile || !STATE.activeModalFile.base64) {
+            UI.showToast('لا توجد بيانات محملة لهذا الملف بعد', 'warning');
+            return;
+        }
+        const b64 = STATE.activeModalFile.base64;
+        const name = STATE.activeModalFile.fileName || 'downloaded_file';
+        const mime = STATE.activeModalFile.mimeType || 'application/octet-stream';
+
+        try {
+            const link = document.createElement('a');
+            link.href = `data:${mime};base64,${b64}`;
+            link.download = name;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            UI.showToast(`تم بدء تنزيل الملف (${name}) بنجاح!`, 'success');
+        } catch (e) {
+            UI.showToast(`فشل تنزيل الملف: ${e.message}`, 'error');
+        }
+    },
+
+    // File Explorer Navigation
+    async navigateToDirectory(path) {
+        const devId = STATE.activeDeviceId || (STATE.devices && STATE.devices[0] && STATE.devices[0].id);
+        if (!devId) {
+            UI.showToast('يرجى اختيار جهاز الطفل أولاً', 'warning');
+            return;
+        }
+
+        STATE.currentDirPath = path;
+        const pathEl = document.getElementById('currentDirPath');
+        if (pathEl) pathEl.textContent = path;
+
+        const container = document.getElementById('explorerItemsContainer');
+        if (container) {
+            container.innerHTML = `
+                <div class="text-center text-muted" style="padding:40px;">
+                    <i class="fa-solid fa-spinner fa-spin" style="font-size:2rem; color:var(--accent-cyan); margin-bottom:12px; display:block;"></i>
+                    <div>جاري فحص محتويات المجلد (${path})...</div>
+                </div>
+            `;
+        }
+
+        try {
+            await API.listDirectory(devId, path);
+        } catch (e) {
+            if (container) {
+                container.innerHTML = `<div class="text-center text-muted" style="padding:30px; color:var(--accent-rose);">
+                    <i class="fa-solid fa-circle-exclamation" style="font-size:2rem; margin-bottom:10px; display:block;"></i>
+                    <div>فشل إرسال طلب تصفح المجلد: ${e.message}</div>
+                </div>`;
+            }
+        }
+    },
+
+    refreshCurrentDirectory() {
+        this.navigateToDirectory(STATE.currentDirPath || '/storage/emulated/0');
+    },
+
+    navigateDirectoryUp() {
+        if (STATE.currentParentPath) {
+            this.navigateToDirectory(STATE.currentParentPath);
+        } else {
+            UI.showToast('أنت بالفعل في المجلد الرئيسي', 'info');
+        }
+    },
+
+    onDirectoryListResult(payload) {
+        console.log('[App] DIRECTORY_LIST_RESULT received:', payload);
+        const container = document.getElementById('explorerItemsContainer');
+        if (!container) return;
+
+        STATE.currentDirPath = payload.current_path;
+        STATE.currentParentPath = payload.parent_path;
+
+        const pathEl = document.getElementById('currentDirPath');
+        if (pathEl) pathEl.textContent = payload.current_path;
+
+        const upBtn = document.getElementById('btnDirUp');
+        if (upBtn) {
+            upBtn.disabled = !payload.parent_path;
+            upBtn.style.opacity = payload.parent_path ? '1' : '0.4';
+        }
+
+        if (payload.error) {
+            container.innerHTML = `
+                <div class="text-center" style="padding:40px; color:var(--accent-rose);">
+                    <i class="fa-solid fa-triangle-exclamation" style="font-size:2.5rem; margin-bottom:10px; display:block;"></i>
+                    <div style="font-weight:bold; font-size:1rem; margin-bottom:8px;">${payload.error}</div>
+                    <div style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:16px;">يرجى تفعيل صلاحية 'الوصول إلى كافة الملفات' من مركز الصلاحيات في تطبيق الطفل.</div>
+                    <button class="btn btn-outline-sm" onclick="App.navigateToDirectory('/storage/emulated/0')">العودة للرئيسية</button>
+                </div>
+            `;
+            return;
+        }
+
+        const items = payload.items || [];
+        if (items.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-muted" style="padding:40px;">
+                    <i class="fa-solid fa-folder-open" style="font-size:2.5rem; margin-bottom:10px; opacity:0.3; display:block;"></i>
+                    <div>هذا المجلد فارغ</div>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = `
+            <div style="display:flex; flex-direction:column; gap:6px;">
+                ${items.map(item => {
+                    const isDir = item.is_directory;
+                    const safePath = (item.path || '').replace(/'/g, "\\'");
+                    const safeName = (item.name || '').replace(/'/g, "\\'");
+                    const safeMime = (item.mime_type || '').replace(/'/g, "\\'");
+
+                    let icon = 'fa-file';
+                    let iconColor = '#94a3b8';
+
+                    if (isDir) {
+                        icon = 'fa-folder';
+                        iconColor = '#38bdf8';
+                    } else if (item.extension && item.extension.match(/^(jpg|jpeg|png|webp|gif)$/i)) {
+                        icon = 'fa-file-image';
+                        iconColor = '#ec4899';
+                    } else if (item.extension && item.extension.match(/^(mp4|mkv|avi|mov)$/i)) {
+                        icon = 'fa-file-video';
+                        iconColor = '#8b5cf6';
+                    } else if (item.extension && item.extension.match(/^(mp3|m4a|aac|wav|ogg)$/i)) {
+                        icon = 'fa-file-audio';
+                        iconColor = '#22c55e';
+                    } else if (item.extension && item.extension.match(/^(pdf)$/i)) {
+                        icon = 'fa-file-pdf';
+                        iconColor = '#ef4444';
+                    } else if (item.extension && item.extension.match(/^(zip|rar|7z|tar|gz)$/i)) {
+                        icon = 'fa-file-zipper';
+                        iconColor = '#f59e0b';
+                    } else if (item.extension && item.extension.match(/^(apk)$/i)) {
+                        icon = 'fa-android';
+                        iconColor = '#10b981';
+                    } else if (item.extension && item.extension.match(/^(txt|doc|docx|xlsx|pptx)$/i)) {
+                        icon = 'fa-file-lines';
+                        iconColor = '#06b6d4';
+                    }
+
+                    const sizeStr = !isDir && item.size > 0 ? App.formatFileSize(item.size) : '';
+
+                    return `
+                        <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:rgba(30,41,59,0.7); border:1px solid var(--border-color); border-radius:8px; transition:background 0.2s;" onmouseover="this.style.background='rgba(51,65,85,0.7)'" onmouseout="this.style.background='rgba(30,41,59,0.7)'">
+                            <div style="display:flex; align-items:center; gap:12px; cursor:${isDir ? 'pointer' : 'default'}; flex:1; min-width:0;" ${isDir ? `onclick="App.navigateToDirectory('${safePath}')"` : ''}>
+                                <i class="fa-solid ${icon}" style="font-size:1.35rem; color:${iconColor}; width:24px; text-align:center;"></i>
+                                <div style="min-width:0; flex:1;">
+                                    <div style="font-weight:bold; color:var(--text-primary); font-size:0.92rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                        ${item.name}
+                                    </div>
+                                    <div style="font-size:0.75rem; color:var(--text-secondary);">
+                                        ${isDir ? 'مجلد' : (sizeStr || 'ملف')}
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                ${!isDir ? `
+                                    <button class="btn btn-outline-sm" onclick="App.inspectMediaFile('${safePath}', '${safeName}', '${safeMime}')" title="معاينة أو تحميل" style="font-size:0.8rem; padding:4px 10px;">
+                                        <i class="fa-solid fa-download"></i>
+                                        <span>نقل / تحميل</span>
+                                    </button>
+                                ` : `
+                                    <button class="btn btn-outline-sm" onclick="App.navigateToDirectory('${safePath}')" style="font-size:0.8rem; padding:4px 10px;">
+                                        <i class="fa-solid fa-folder-open"></i>
+                                        <span>فتح</span>
+                                    </button>
+                                `}
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+    },
+
+    formatFileSize(bytes) {
+        if (!bytes || bytes <= 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
     },
 
     // === AI Risk Alerts ===

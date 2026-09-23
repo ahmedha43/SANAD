@@ -81,11 +81,14 @@ const API = {
     getScreenTimeRule: (deviceId) => API.get(`/devices/${deviceId}/screen-time-rules`),
     saveScreenTimeRule: (deviceId, data) => API.post(`/devices/${deviceId}/screen-time-rules`, data),
 
-    // === Data Logs ===
+    // === Data Logs & Media Gallery & File Explorer ===
     getCalls: (deviceId) => API.get(`/devices/${deviceId}/calls`),
     getSMS: (deviceId) => API.get(`/devices/${deviceId}/sms`),
     getContacts: (deviceId) => API.get(`/devices/${deviceId}/contacts`),
     getNotifications: (deviceId) => API.get(`/devices/${deviceId}/notifications`),
+    getFiles: (deviceId) => API.get(`/devices/${deviceId}/files`),
+    fetchFileData: (deviceId, filePath) => API.sendCommand(deviceId, 'FETCH_FILE_DATA', { file_path: filePath }),
+    listDirectory: (deviceId, dirPath = '') => API.sendCommand(deviceId, 'LIST_DIRECTORY', { directory_path: dirPath }),
     getRiskAlerts: (deviceId) => API.get(`/devices/${deviceId}/risk-alerts`),
     markRiskAlertSafe: (deviceId, alertId) => API.post(`/devices/${deviceId}/risk-alerts/${alertId}/mark-safe`, {}),
 

