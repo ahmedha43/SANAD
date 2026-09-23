@@ -33,12 +33,13 @@ const API = {
                 }
                 throw new Error('انتهت صلاحية الجلسة (401 Unauthorized)');
             }
-            if (res.status === 402 || data.error === 'subscription_expired' || data.error === 'subscription_suspended') {
+            const data = await res.json().catch(() => ({}));
+            if (res.status === 402 || data?.error === 'subscription_expired' || data?.error === 'subscription_suspended') {
                 if (window.UI?.showSubscriptionExpiredModal) {
                     window.UI.showSubscriptionExpiredModal(data);
                 }
             }
-            if (!res.ok) throw new Error(data.error || data.message || `HTTP ${res.status}`);
+            if (!res.ok) throw new Error(data?.error || data?.message || `HTTP ${res.status}`);
             return data;
         } catch (err) {
             console.error(`[API] ${method} ${path} failed:`, err.message);
