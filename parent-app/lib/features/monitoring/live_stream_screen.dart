@@ -152,9 +152,9 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
     final config = <String, dynamic>{
       'iceServers': [
         {'urls': 'stun:stun.l.google.com:19302'},
-        {'urls': 'stun:192.168.1.110:3478'},
+        {'urls': 'stun:192.168.88.54:3478'},
         {
-          'urls': 'turn:192.168.1.110:3478',
+          'urls': 'turn:192.168.88.54:3478',
           'username': 'parentalctl',
           'credential': 'SecureTurnSecretPass2026',
         }

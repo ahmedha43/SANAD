@@ -176,7 +176,7 @@ class MainActivity : AppCompatActivity() {
             val serverInput = EditText(this).apply {
                 hint = "عنوان سيرفر سَنَد (Backend Server URL)"
                 val savedUrl = KidsAgentApp.instance.prefs.getString(KidsAgentApp.KEY_SERVER_URL, null)
-                setText(if (!savedUrl.isNullOrBlank()) savedUrl else "http://192.168.1.110:8080")
+                setText(if (!savedUrl.isNullOrBlank()) savedUrl else "http://192.168.88.54:8080")
                 setTextColor(Color.WHITE)
                 setHintTextColor(0xFF94A3B8.toInt())
                 background = makeShape(0xFF0F172A.toInt(), 0xFF475569.toInt(), 8f)
@@ -455,6 +455,43 @@ class MainActivity : AppCompatActivity() {
             }
             infoCard.addView(infoDetails)
             root.addView(infoCard)
+
+            val changeServerButton = Button(this).apply {
+                text = "🌐 تعديل عنوان السيرفر (Change Server IP)"
+                background = makeShape(0xFF0284C7.toInt(), 0, 10f)
+                setTextColor(Color.WHITE)
+                setTypeface(null, Typeface.BOLD)
+                textSize = 13f
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { bottomMargin = 12 }
+                setOnClickListener {
+                    val currentUrl = KidsAgentApp.instance.prefs.getString(KidsAgentApp.KEY_SERVER_URL, "http://192.168.88.54:8080") ?: "http://192.168.88.54:8080"
+                    val input = EditText(this@MainActivity).apply {
+                        setText(currentUrl)
+                        setTextColor(Color.BLACK)
+                        setPadding(32, 24, 32, 24)
+                    }
+                    AlertDialog.Builder(this@MainActivity)
+                        .setTitle("تحديث عنوان سيرفر سَنَد")
+                        .setMessage("أدخل عنوان الـ IP الجديد للكمبيوتر/السيرفر (مثال: http://192.168.88.54:8080):")
+                        .setView(input)
+                        .setPositiveButton("حفظ وتحديث الاتصال") { _, _ ->
+                            val newUrl = input.text.toString().trim()
+                            if (newUrl.isNotBlank()) {
+                                val formattedUrl = if (!newUrl.startsWith("http://") && !newUrl.startsWith("https://")) "http://$newUrl" else newUrl
+                                KidsAgentApp.instance.prefs.edit().putString(KidsAgentApp.KEY_SERVER_URL, formattedUrl).apply()
+                                Toast.makeText(this@MainActivity, "تم تحديث السيرفر إلى: $formattedUrl", Toast.LENGTH_SHORT).show()
+                                ForegroundSyncService.start(this@MainActivity)
+                                renderUI()
+                            }
+                        }
+                        .setNegativeButton("إلغاء", null)
+                        .show()
+                }
+            }
+            root.addView(changeServerButton)
 
             val unpairButton = Button(this).apply {
                 text = "🔄 تغيير الاقتران / ربط بكود جديد (Re-Pair)"
